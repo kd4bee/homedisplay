@@ -550,7 +550,7 @@
             rainMonthly: 2.18,
             rainYearly: 14.35,
             rainLastStartMinsAgo: 45,
-            dryStreakDays: 3,
+            dryStreakDays: 0,
             solar: 485,
             uv: 3,
             inTemp: 71.2,
@@ -743,6 +743,15 @@
                 setTimeout(initRainMiniChart, 50);
             } else if (activeRainMode === 'tracker') {
                 const isRaining = weatherData.rainRate > 0;
+                
+                // Dynamically calculate actual dry streak days based on rain history and last rain event timestamp
+                let computedDryStreakDays = weatherData.dryStreakDays;
+                if (isRaining || weatherData.rainDaily > 0 || (weatherData.rainLastStartMinsAgo !== undefined && weatherData.rainLastStartMinsAgo < 1440)) {
+                    computedDryStreakDays = 0;
+                } else if (weatherData.rainLastStartMinsAgo !== undefined) {
+                    computedDryStreakDays = Math.floor(weatherData.rainLastStartMinsAgo / 1440);
+                }
+
                 container.innerHTML = `
                     <div class="space-y-2">
                         <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
@@ -759,7 +768,7 @@
                             </div>
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase">DRY STREAK</div>
-                                <div class="text-sm font-bold text-emerald-400">${weatherData.dryStreakDays} Days Dry</div>
+                                <div class="text-sm font-bold text-emerald-400">${computedDryStreakDays} Days Dry</div>
                             </div>
                         </div>
                     </div>
