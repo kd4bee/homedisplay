@@ -70,6 +70,11 @@
             filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.6));
         }
 
+        .digital-readout-large {
+            font-size: var(--digital-font-size, 36px);
+            line-height: 1.1;
+        }
+
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #0e131d; }
         ::-webkit-scrollbar-thumb { background: #2a3854; border-radius: 4px; }
@@ -95,7 +100,7 @@
             </div>
         </div>
 
-        <!-- Clock & Status Bar (White Time Font & Akamai CDN Sync) -->
+        <!-- Clock & Status Bar -->
         <div class="flex flex-wrap items-center gap-3 text-center">
             <div class="bg-slate-900/90 px-4 py-2 rounded-lg border border-cyan-500/40 shadow-md">
                 <div class="text-xs text-slate-300 font-bold uppercase tracking-wider">LOCAL TIME</div>
@@ -136,25 +141,38 @@
             <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
                 <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-wind mr-1.5"></i> WIND SPEED & DIRECTION</span>
-                    <div class="flex items-center gap-1 text-xs">
-                        <button onclick="window.setWindUnit('mph')" id="unit-wind-mph" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">MPH</button>
-                        <button onclick="window.setWindUnit('kmh')" id="unit-wind-kmh" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">KM/H</button>
-                        <button onclick="window.setWindUnit('kts')" id="unit-wind-kts" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">KTS</button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('wind')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-wind">DIGITAL</span>
+                        </button>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button onclick="window.setWindUnit('mph')" id="unit-wind-mph" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">MPH</button>
+                            <button onclick="window.setWindUnit('kmh')" id="unit-wind-kmh" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">KM/H</button>
+                            <button onclick="window.setWindUnit('kts')" id="unit-wind-kts" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">KTS</button>
+                        </div>
                     </div>
                 </div>
                 <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
-                    <div class="flex flex-col items-center w-full">
-                        <canvas id="gauge-wind-speed" width="240" height="240" class="gauge-canvas"></canvas>
-                        <span class="text-xs text-slate-300 font-bold mt-1">Wind Speed</span>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-wind-speed" width="240" height="240" class="gauge-canvas gauge-view-wind"></canvas>
+                        <div id="digital-container-wind-speed" class="hidden flex-col items-center justify-center digital-view-wind text-center">
+                            <div id="digital-wind-speed" class="font-black text-cyan-400 digital-readout-large">0.0</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">SPEED (<span class="lbl-wind-unit-str">MPH</span>)</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-wind">Wind Speed</span>
                     </div>
-                    <div class="flex flex-col items-center w-full">
-                        <canvas id="gauge-wind-dir" width="240" height="240" class="gauge-canvas"></canvas>
-                        <span class="text-xs text-slate-300 font-bold mt-1">Wind Direction</span>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-wind-dir" width="240" height="240" class="gauge-canvas gauge-view-wind"></canvas>
+                        <div id="digital-container-wind-dir" class="hidden flex-col items-center justify-center digital-view-wind text-center">
+                            <div id="digital-wind-dir" class="font-black text-emerald-400 digital-readout-large">N (000°)</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">DIRECTION</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-wind">Wind Direction</span>
                     </div>
                 </div>
                 <div class="w-full grid grid-cols-3 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">SPEED (<span id="lbl-wind-unit">MPH</span>)</div>
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">SPEED (<span id="lbl-wind-unit" class="lbl-wind-unit-str">MPH</span>)</div>
                         <div id="val-wind-speed" class="text-lg md:text-xl font-bold text-cyan-400">0.0</div>
                     </div>
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
@@ -172,19 +190,32 @@
             <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
                 <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-temperature-half mr-1.5"></i> OUTDOOR TEMP & HUM</span>
-                    <div class="flex items-center gap-1 text-xs">
-                        <button onclick="window.setTempUnit('F')" id="unit-f" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">°F</button>
-                        <button onclick="window.setTempUnit('C')" id="unit-c" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">°C</button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('outTemp')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-outTemp">DIGITAL</span>
+                        </button>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button onclick="window.setTempUnit('F')" id="unit-f" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">°F</button>
+                            <button onclick="window.setTempUnit('C')" id="unit-c" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">°C</button>
+                        </div>
                     </div>
                 </div>
                 <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
-                    <div class="flex flex-col items-center w-full">
-                        <canvas id="gauge-temp" width="240" height="240" class="gauge-canvas"></canvas>
-                        <span class="text-xs text-slate-300 font-bold mt-1">Temperature</span>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-temp" width="240" height="240" class="gauge-canvas gauge-view-outTemp"></canvas>
+                        <div id="digital-container-temp" class="hidden flex-col items-center justify-center digital-view-outTemp text-center">
+                            <div id="digital-temp" class="font-black text-amber-400 digital-readout-large">72.4°F</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">OUTDOOR TEMP</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-outTemp">Temperature</span>
                     </div>
-                    <div class="flex flex-col items-center w-full">
-                        <canvas id="gauge-out-hum" width="240" height="240" class="gauge-canvas"></canvas>
-                        <span class="text-xs text-slate-300 font-bold mt-1">Humidity</span>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-out-hum" width="240" height="240" class="gauge-canvas gauge-view-outTemp"></canvas>
+                        <div id="digital-container-out-hum" class="hidden flex-col items-center justify-center digital-view-outTemp text-center">
+                            <div id="digital-out-hum" class="font-black text-emerald-400 digital-readout-large">62%</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">OUTDOOR HUMIDITY</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-outTemp">Humidity</span>
                     </div>
                 </div>
                 <div class="w-full grid grid-cols-3 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
@@ -207,16 +238,29 @@
             <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
                 <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-house-signal mr-1.5"></i> INDOOR TEMP & HUM</span>
-                    <span class="text-xs text-slate-400">Console</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('inTemp')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-inTemp">DIGITAL</span>
+                        </button>
+                        <span class="text-xs text-slate-400">Console</span>
+                    </div>
                 </div>
                 <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
-                    <div class="flex flex-col items-center w-full">
-                        <canvas id="gauge-in-temp" width="240" height="240" class="gauge-canvas"></canvas>
-                        <span class="text-xs text-slate-300 font-bold mt-1">Indoor Temp</span>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-in-temp" width="240" height="240" class="gauge-canvas gauge-view-inTemp"></canvas>
+                        <div id="digital-container-in-temp" class="hidden flex-col items-center justify-center digital-view-inTemp text-center">
+                            <div id="digital-in-temp" class="font-black text-cyan-300 digital-readout-large">71.2°F</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">INDOOR TEMP</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-inTemp">Indoor Temp</span>
                     </div>
-                    <div class="flex flex-col items-center w-full">
-                        <canvas id="gauge-in-hum" width="240" height="240" class="gauge-canvas"></canvas>
-                        <span class="text-xs text-slate-300 font-bold mt-1">Indoor Hum</span>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-in-hum" width="240" height="240" class="gauge-canvas gauge-view-inTemp"></canvas>
+                        <div id="digital-container-in-hum" class="hidden flex-col items-center justify-center digital-view-inTemp text-center">
+                            <div id="digital-in-hum" class="font-black text-teal-300 digital-readout-large">45%</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">INDOOR HUMIDITY</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-inTemp">Indoor Hum</span>
                     </div>
                 </div>
                 <div class="w-full grid grid-cols-2 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
@@ -240,13 +284,22 @@
             <div class="wd-panel p-3.5 flex flex-col justify-between items-center relative">
                 <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-1">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-gauge-high mr-1.5"></i> BAROMETRIC PRESSURE</span>
-                    <div class="flex items-center gap-1 text-xs">
-                        <button onclick="window.setBaroUnit('hpa')" id="unit-baro-hpa" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">hPa/mb</button>
-                        <button onclick="window.setBaroUnit('inhg')" id="unit-baro-inhg" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">inHg</button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('baro')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-baro">DIGITAL</span>
+                        </button>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button onclick="window.setBaroUnit('hpa')" id="unit-baro-hpa" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">hPa/mb</button>
+                            <button onclick="window.setBaroUnit('inhg')" id="unit-baro-inhg" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">inHg</button>
+                        </div>
                     </div>
                 </div>
-                <div class="relative w-full flex justify-center items-center py-1">
-                    <canvas id="gauge-baro" width="200" height="200" class="gauge-canvas"></canvas>
+                <div class="relative w-full flex justify-center items-center py-1 min-h-[200px]">
+                    <canvas id="gauge-baro" width="200" height="200" class="gauge-canvas gauge-view-baro"></canvas>
+                    <div id="digital-container-baro" class="hidden flex-col items-center justify-center digital-view-baro text-center py-6">
+                        <div id="digital-baro" class="font-black text-emerald-400 digital-readout-large">1013.2 hPa</div>
+                        <div class="text-xs text-slate-400 font-bold uppercase mt-1">BAROMETRIC PRESSURE</div>
+                    </div>
                 </div>
                 <div class="w-full grid grid-cols-2 gap-1.5 mt-1 text-center bg-slate-900/70 p-2 rounded-lg border border-slate-800">
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.setBaroUnit('hpa')">
@@ -406,7 +459,7 @@
                         <input type="text" id="setting-app-key" placeholder="Enter Ambient Weather Application Key" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
                     </div>
 
-                    <!-- Unit Preferences & Refresh Interval selectors matching user screenshot -->
+                    <!-- Unit Preferences & Refresh Interval selectors -->
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <div>
                             <label class="block text-slate-300 mb-1">TEMP UNIT</label>
@@ -440,6 +493,15 @@
                                 <option value="mm">Millimeters (mm)</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="pt-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-slate-300">DIGITAL DISPLAY FONT SIZE</label>
+                            <span id="lbl-digital-font-size" class="text-cyan-400 font-bold">40px</span>
+                        </div>
+                        <input type="range" id="setting-digital-font-size" min="20" max="100" value="40" oninput="document.getElementById('lbl-digital-font-size').innerText = this.value + 'px'" class="w-full accent-cyan-400 cursor-pointer">
+                        <p class="text-[10px] text-slate-400 mt-0.5">Scales digital readouts for easy viewing across the room.</p>
                     </div>
 
                     <div>
@@ -476,12 +538,20 @@
         let refreshIntervalMs = 16000;
         let isSimulation = false;
         let updateInterval = null;
-        
+        let digitalFontSize = 40;
+
+        let paneModes = {
+            wind: 'gauge',
+            outTemp: 'gauge',
+            inTemp: 'gauge',
+            baro: 'gauge'
+        };
+
         let currentTempUnit = 'F';
         let currentBaroUnit = 'hpa';
         let currentWindUnit = 'mph';
         let currentRainUnit = 'in';
-        let activeRainMode = 'extended'; // Default Mode: Extended Totals Grid
+        let activeRainMode = 'extended';
 
         let windChart = null;
         let tempBaroChart = null;
@@ -500,6 +570,7 @@
                     baroUnit: "hpa",
                     windUnit: "mph",
                     rainUnit: "in",
+                    digitalFontSize: 40,
                     refreshInterval: 15000
                 },
                 {
@@ -512,6 +583,7 @@
                     baroUnit: "hpa",
                     windUnit: "mph",
                     rainUnit: "in",
+                    digitalFontSize: 40,
                     refreshInterval: 15000
                 },
                 {
@@ -524,11 +596,43 @@
                     baroUnit: "hpa",
                     windUnit: "mph",
                     rainUnit: "in",
+                    digitalFontSize: 40,
                     refreshInterval: 15000
                 }
             ],
             activeStationIndex: 0
         };
+
+        window.togglePaneDisplay = function(paneKey) {
+            paneModes[paneKey] = paneModes[paneKey] === 'gauge' ? 'digital' : 'gauge';
+            applyPaneDisplayModes();
+        };
+
+        function applyPaneDisplayModes() {
+            Object.keys(paneModes).forEach(paneKey => {
+                const mode = paneModes[paneKey];
+                const gaugeEls = document.querySelectorAll(`.gauge-view-${paneKey}`);
+                const digitalEls = document.querySelectorAll(`.digital-view-${paneKey}`);
+                const btnLabel = document.getElementById(`btn-toggle-${paneKey}`);
+
+                if (mode === 'digital') {
+                    gaugeEls.forEach(el => el.classList.add('hidden'));
+                    digitalEls.forEach(el => el.classList.remove('hidden'));
+                    digitalEls.forEach(el => el.classList.add('flex'));
+                    if (btnLabel) btnLabel.innerText = 'GAUGE';
+                } else {
+                    gaugeEls.forEach(el => el.classList.remove('hidden'));
+                    digitalEls.forEach(el => el.classList.add('hidden'));
+                    digitalEls.forEach(el => el.classList.remove('flex'));
+                    if (btnLabel) btnLabel.innerText = 'DIGITAL';
+                }
+            });
+        }
+
+        function setDigitalFontSize(size) {
+            digitalFontSize = size;
+            document.documentElement.style.setProperty('--digital-font-size', size + 'px');
+        }
 
         let weatherData = {
             windSpeed: 8.4,
@@ -549,7 +653,7 @@
             rainWeekly: 0.42,
             rainMonthly: 2.18,
             rainYearly: 14.35,
-            rainLastStartMinsAgo: 45,
+            rainLastTimeStr: "3:05 PM",
             dryStreakDays: 0,
             solar: 485,
             uv: 3,
@@ -743,13 +847,9 @@
                 setTimeout(initRainMiniChart, 50);
             } else if (activeRainMode === 'tracker') {
                 const isRaining = weatherData.rainRate > 0;
-                
-                // Dynamically calculate actual dry streak days based on rain history and last rain event timestamp
                 let computedDryStreakDays = weatherData.dryStreakDays;
-                if (isRaining || weatherData.rainDaily > 0 || (weatherData.rainLastStartMinsAgo !== undefined && weatherData.rainLastStartMinsAgo < 1440)) {
+                if (isRaining || weatherData.rainDaily > 0) {
                     computedDryStreakDays = 0;
-                } else if (weatherData.rainLastStartMinsAgo !== undefined) {
-                    computedDryStreakDays = Math.floor(weatherData.rainLastStartMinsAgo / 1440);
                 }
 
                 container.innerHTML = `
@@ -764,7 +864,7 @@
                         <div class="grid grid-cols-2 gap-2 text-center">
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase">LAST RAIN EVENT</div>
-                                <div class="text-sm font-bold text-amber-300">${isRaining ? 'NOW' : weatherData.rainLastStartMinsAgo + ' mins ago'}</div>
+                                <div class="text-sm font-bold text-amber-300">${isRaining ? 'NOW' : (weatherData.rainLastTimeStr || '3:05 PM')}</div>
                             </div>
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase">DRY STREAK</div>
@@ -987,7 +1087,6 @@
             ctx.fillStyle = skin.digitalColor;
             ctx.font = 'bold 19px Arial, Helvetica, sans-serif';
             const valDecs = options.valDecimals !== undefined ? options.valDecimals : 1;
-            // Draw digital reading position based on digitalYOffset option (defaults to 0.30 to move text down)
             const yOffset = options.digitalYOffset !== undefined ? options.digitalYOffset : 0.30;
             ctx.fillText(value.toFixed(valDecs) + (unit ? ' ' + unit : ''), cx, cy + radius * yOffset);
         }
@@ -1233,7 +1332,6 @@
                 );
             }
 
-            // Safely set text content with null checks for dynamic elements
             const elWindSpeed = document.getElementById('val-wind-speed');
             if (elWindSpeed) elWindSpeed.innerText = displayWindSpeed.toFixed(1);
 
@@ -1278,6 +1376,30 @@
 
             const elInHum = document.getElementById('val-in-hum');
             if (elInHum) elInHum.innerText = `${weatherData.inHum}%`;
+
+            const digWindSpd = document.getElementById('digital-wind-speed');
+            if (digWindSpd) digWindSpd.innerText = displayWindSpeed.toFixed(1);
+
+            const digWindDir = document.getElementById('digital-wind-dir');
+            if (digWindDir) digWindDir.innerText = `${degToCardinal(weatherData.windDeg)} (${String(Math.round(weatherData.windDeg)).padStart(3, '0')}°)`;
+
+            const digTemp = document.getElementById('digital-temp');
+            if (digTemp) digTemp.innerText = `${displayTemp.toFixed(1)}°${currentTempUnit}`;
+
+            const digOutHum = document.getElementById('digital-out-hum');
+            if (digOutHum) digOutHum.innerText = `${weatherData.outHum}%`;
+
+            const digInTemp = document.getElementById('digital-in-temp');
+            if (digInTemp) digInTemp.innerText = `${displayInTemp.toFixed(1)}°${currentTempUnit}`;
+
+            const digInHum = document.getElementById('digital-in-hum');
+            if (digInHum) digInHum.innerText = `${weatherData.inHum}%`;
+
+            const digBaro = document.getElementById('digital-baro');
+            if (digBaro) {
+                if (currentBaroUnit === 'inhg') digBaro.innerText = `${weatherData.baroInhg.toFixed(2)} inHg`;
+                else digBaro.innerText = `${weatherData.baroHpa.toFixed(1)} hPa`;
+            }
 
             renderRainView();
 
@@ -1550,6 +1672,12 @@
                         weatherData.rainWeekly = lastData.weeklyrainin || 0;
                         weatherData.rainMonthly = lastData.monthlyrainin || 0;
 
+                        if (lastData.lastRain) {
+                            weatherData.rainLastTimeStr = new Date(lastData.lastRain).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                        } else if (lastData.dateutc) {
+                            weatherData.rainLastTimeStr = new Date(lastData.dateutc).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                        }
+
                         weatherData.solar = lastData.solarradiation || 0;
                         weatherData.uv = lastData.uv || 0;
 
@@ -1617,6 +1745,8 @@
             const baroUnitInput = document.getElementById('setting-baro-unit');
             const windUnitInput = document.getElementById('setting-wind-unit');
             const rainUnitInput = document.getElementById('setting-rain-unit');
+            const fontSizeInput = document.getElementById('setting-digital-font-size');
+            const fontSizeLbl = document.getElementById('lbl-digital-font-size');
             const refreshInput = document.getElementById('setting-refresh-interval');
 
             if (nameInput) nameInput.value = st.name;
@@ -1628,17 +1758,10 @@
             if (baroUnitInput) baroUnitInput.value = st.baroUnit || currentBaroUnit;
             if (windUnitInput) windUnitInput.value = st.windUnit || currentWindUnit;
             if (rainUnitInput) rainUnitInput.value = st.rainUnit || currentRainUnit;
+            if (fontSizeInput) fontSizeInput.value = st.digitalFontSize || 40;
+            if (fontSizeLbl) fontSizeLbl.innerText = (st.digitalFontSize || 40) + "px";
             if (refreshInput) refreshInput.value = st.refreshInterval || refreshIntervalMs;
         }
-
-        window.onStationDropdownChange = function() {
-            saveFormToCurrentStationIndex();
-            const selectEl = document.getElementById('setting-station-select');
-            if (selectEl) {
-                config.activeStationIndex = parseInt(selectEl.value);
-                loadActiveStationIntoForm();
-            }
-        };
 
         function saveFormToCurrentStationIndex() {
             const nameInput = document.getElementById('setting-station-name');
@@ -1650,6 +1773,7 @@
             const baroUnitInput = document.getElementById('setting-baro-unit');
             const windUnitInput = document.getElementById('setting-wind-unit');
             const rainUnitInput = document.getElementById('setting-rain-unit');
+            const fontSizeInput = document.getElementById('setting-digital-font-size');
             const refreshInput = document.getElementById('setting-refresh-interval');
 
             if (config.stations[config.activeStationIndex]) {
@@ -1663,36 +1787,10 @@
                 if (baroUnitInput) st.baroUnit = baroUnitInput.value;
                 if (windUnitInput) st.windUnit = windUnitInput.value;
                 if (rainUnitInput) st.rainUnit = rainUnitInput.value;
+                if (fontSizeInput) st.digitalFontSize = parseInt(fontSizeInput.value);
                 if (refreshInput) st.refreshInterval = parseInt(refreshInput.value);
             }
         }
-
-        window.addNewStation = function() {
-            saveFormToCurrentStationIndex();
-            config.stations.push({
-                name: "Station " + (config.stations.length + 1),
-                location: "City, State",
-                macAddress: "",
-                apiKey: "",
-                appKey: "",
-                tempUnit: "F",
-                baroUnit: "hpa",
-                windUnit: "mph",
-                rainUnit: "in",
-                refreshInterval: 15000
-            });
-            config.activeStationIndex = config.stations.length - 1;
-            populateStationDropdown();
-            loadActiveStationIntoForm();
-        };
-
-        window.deleteCurrentStation = function() {
-            if (config.stations.length <= 1) return;
-            config.stations.splice(config.activeStationIndex, 1);
-            config.activeStationIndex = Math.max(0, config.activeStationIndex - 1);
-            populateStationDropdown();
-            loadActiveStationIntoForm();
-        };
 
         function applyActiveStationPreferences() {
             const st = config.stations[config.activeStationIndex] || config.stations[0];
@@ -1700,6 +1798,7 @@
             if (st.baroUnit) window.setBaroUnit(st.baroUnit);
             if (st.windUnit) window.setWindUnit(st.windUnit);
             if (st.rainUnit) window.setRainUnit(st.rainUnit);
+            if (st.digitalFontSize) setDigitalFontSize(st.digitalFontSize);
             if (st.refreshInterval) {
                 refreshIntervalMs = st.refreshInterval;
             }
