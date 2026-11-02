@@ -28,6 +28,8 @@
             --neon-yellow: #ffee00;
             --neon-red: #ff3355;
             --led-off: #1b2633;
+            --digital-font-size: 40px;
+            --gauge-scale: 240px;
         }
 
         body {
@@ -64,14 +66,22 @@
         .led-red { background-color: var(--neon-red); box-shadow: 0 0 8px var(--neon-red); }
         .led-off { background-color: var(--led-off); }
 
-        .glow-white { text-shadow: 0 0 10px rgba(255, 255, 255, 0.7); }
+        /* Crisp clock font styling without blur or heavy glow */
+        .crisp-clock {
+            text-shadow: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
 
         canvas.gauge-canvas {
+            width: var(--gauge-scale) !important;
+            height: var(--gauge-scale) !important;
             filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.6));
+            transition: width 0.2s ease, height 0.2s ease;
         }
 
         .digital-readout-large {
-            font-size: var(--digital-font-size, 36px);
+            font-size: var(--digital-font-size, 40px);
             line-height: 1.1;
         }
 
@@ -104,18 +114,23 @@
         <div class="flex flex-wrap items-center gap-3 text-center">
             <div class="bg-slate-900/90 px-4 py-2 rounded-lg border border-cyan-500/40 shadow-md">
                 <div class="text-xs text-slate-300 font-bold uppercase tracking-wider">LOCAL TIME</div>
-                <div id="clock-local" class="text-2xl md:text-3xl font-black text-white glow-white leading-tight">00:00:00</div>
+                <div id="clock-local" class="text-2xl md:text-3xl font-black text-white crisp-clock leading-tight">00:00:00</div>
             </div>
             <div class="bg-slate-900/90 px-4 py-2 rounded-lg border border-amber-500/40 shadow-md">
                 <div class="text-xs text-slate-300 font-bold uppercase tracking-wider">UTC CLOCK</div>
-                <div id="clock-utc" class="text-2xl md:text-3xl font-black text-white glow-white leading-tight">00:00:00 UTC</div>
+                <div id="clock-utc" class="text-2xl md:text-3xl font-black text-white crisp-clock leading-tight">00:00:00 UTC</div>
             </div>
             <div class="bg-slate-900/80 px-3.5 py-2 rounded-lg border border-slate-700/60 flex flex-col justify-center text-left">
                 <div class="flex items-center gap-2">
                     <span id="status-led" class="led-indicator led-green"></span>
                     <span class="text-xs text-slate-300 font-bold">SOURCE: <span id="sync-source-badge" class="text-cyan-400 font-bold">Akamai CDN</span></span>
                 </div>
-                <div class="text-[11px] text-slate-400 mt-0.5 font-mono" id="sync-latency-badge">Lat: --ms</div>
+                <div class="flex items-center justify-between gap-3 mt-0.5">
+                    <div class="text-[11px] text-slate-400 font-mono" id="sync-latency-badge">Lat: --ms</div>
+                    <button onclick="window.forceRefreshConnection()" title="Reload Page & Data" class="text-[11px] text-cyan-300 hover:text-white bg-cyan-950/80 hover:bg-cyan-900 px-2 py-0.5 rounded border border-cyan-700/60 transition flex items-center gap-1 cursor-pointer font-bold shadow-inner">
+                        <i id="refresh-icon" class="fa-solid fa-rotate text-[10px]"></i> Refresh Data
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -295,7 +310,7 @@
                     </div>
                 </div>
                 <div class="relative w-full flex justify-center items-center py-1 min-h-[200px]">
-                    <canvas id="gauge-baro" width="200" height="200" class="gauge-canvas gauge-view-baro"></canvas>
+                    <canvas id="gauge-baro" width="240" height="240" class="gauge-canvas gauge-view-baro"></canvas>
                     <div id="digital-container-baro" class="hidden flex-col items-center justify-center digital-view-baro text-center py-6">
                         <div id="digital-baro" class="font-black text-emerald-400 digital-readout-large">1013.2 hPa</div>
                         <div class="text-xs text-slate-400 font-bold uppercase mt-1">BAROMETRIC PRESSURE</div>
@@ -495,6 +510,17 @@
                         </div>
                     </div>
 
+                    <!-- Gauge Size / Zoom Slider -->
+                    <div class="pt-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-slate-300">GAUGE SIZE (ZOOM)</label>
+                            <span id="lbl-gauge-scale" class="text-cyan-400 font-bold">240px</span>
+                        </div>
+                        <input type="range" id="setting-gauge-scale" min="150" max="380" step="10" value="240" oninput="document.getElementById('lbl-gauge-scale').innerText = this.value + 'px'" class="w-full accent-cyan-400 cursor-pointer">
+                        <p class="text-[10px] text-slate-400 mt-0.5">Enlarges all analog gauge dials equally and adapts panes.</p>
+                    </div>
+
+                    <!-- Digital Display Font Size Slider -->
                     <div class="pt-1">
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-slate-300">DIGITAL DISPLAY FONT SIZE</label>
@@ -539,6 +565,7 @@
         let isSimulation = false;
         let updateInterval = null;
         let digitalFontSize = 40;
+        let gaugeScaleSize = 240;
 
         let paneModes = {
             wind: 'gauge',
@@ -571,6 +598,7 @@
                     windUnit: "mph",
                     rainUnit: "in",
                     digitalFontSize: 40,
+                    gaugeScale: 240,
                     refreshInterval: 15000
                 },
                 {
@@ -584,6 +612,7 @@
                     windUnit: "mph",
                     rainUnit: "in",
                     digitalFontSize: 40,
+                    gaugeScale: 240,
                     refreshInterval: 15000
                 },
                 {
@@ -597,6 +626,7 @@
                     windUnit: "mph",
                     rainUnit: "in",
                     digitalFontSize: 40,
+                    gaugeScale: 240,
                     refreshInterval: 15000
                 }
             ],
@@ -634,6 +664,21 @@
             document.documentElement.style.setProperty('--digital-font-size', size + 'px');
         }
 
+        function setGaugeScale(size) {
+            gaugeScaleSize = size;
+            document.documentElement.style.setProperty('--gauge-scale', size + 'px');
+            
+            // Resize actual canvas drawing buffers to match slider size for crisp rendering
+            ['gauge-wind-speed', 'gauge-wind-dir', 'gauge-temp', 'gauge-out-hum', 'gauge-in-temp', 'gauge-in-hum', 'gauge-baro'].forEach(id => {
+                const cvs = document.getElementById(id);
+                if (cvs) {
+                    cvs.width = size;
+                    cvs.height = size;
+                }
+            });
+            renderAllGauges();
+        }
+
         let weatherData = {
             windSpeed: 8.4,
             windGust: 12.1,
@@ -653,7 +698,7 @@
             rainWeekly: 0.42,
             rainMonthly: 2.18,
             rainYearly: 14.35,
-            rainLastTimeStr: "3:05 PM",
+            rainLastTimeStr: "3:05 PM", // Locked to your station's reported time
             dryStreakDays: 0,
             solar: 485,
             uv: 3,
@@ -1029,8 +1074,10 @@
                 });
             }
 
+            // Scale tick number font size proportionally with canvas width
+            const tickFontSize = Math.max(9, Math.round(w * 0.046));
             ctx.fillStyle = skin.textColor;
-            ctx.font = 'bold 11px Arial, Helvetica, sans-serif';
+            ctx.font = `bold ${tickFontSize}px Arial, Helvetica, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
@@ -1054,7 +1101,7 @@
                 ctx.stroke();
 
                 if (!options.hideTickNumbers && (i % 2 === 0 || tickCount <= 5)) {
-                    const textR = radius - 20;
+                    const textR = radius - Math.max(16, Math.round(w * 0.085));
                     const tx = cx + Math.cos(angle) * textR;
                     const ty = cy + Math.sin(angle) * textR;
                     const displayTick = options.decimals ? tickVal.toFixed(options.decimals) : Math.round(tickVal);
@@ -1084,8 +1131,10 @@
             ctx.lineWidth = 2;
             ctx.stroke();
 
+            // Updated from 10% to 12% of canvas width to match other gauges
+            const dialValueFontSize = Math.max(16, Math.round(w * 0.12));
             ctx.fillStyle = skin.digitalColor;
-            ctx.font = 'bold 19px Arial, Helvetica, sans-serif';
+            ctx.font = `bold ${dialValueFontSize}px Arial, Helvetica, sans-serif`;
             const valDecs = options.valDecimals !== undefined ? options.valDecimals : 1;
             const yOffset = options.digitalYOffset !== undefined ? options.digitalYOffset : 0.30;
             ctx.fillText(value.toFixed(valDecs) + (unit ? ' ' + unit : ''), cx, cy + radius * yOffset);
@@ -1120,7 +1169,8 @@
             ctx.lineWidth = 2.5;
             ctx.stroke();
 
-            ctx.font = 'bold 9px Arial, Helvetica, sans-serif';
+            const tickFontSize = Math.max(8, Math.round(w * 0.04));
+            ctx.font = `bold ${tickFontSize}px Arial, Helvetica, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
@@ -1141,7 +1191,7 @@
                 ctx.stroke();
 
                 if (d % 90 === 0) {
-                    const textR = radius - 20;
+                    const textR = radius - Math.max(16, Math.round(w * 0.085));
                     const tx = cx + Math.cos(rad) * textR;
                     const ty = cy + Math.sin(rad) * textR;
                     ctx.fillStyle = skin.textColor;
@@ -1156,7 +1206,8 @@
                 { label: 'W', deg: 270, color: skin.textColor }
             ];
 
-            ctx.font = 'bold 13px Arial, Helvetica, sans-serif';
+            const cardFontSize = Math.max(11, Math.round(w * 0.055));
+            ctx.font = `bold ${cardFontSize}px Arial, Helvetica, sans-serif`;
             cardinals.forEach(pt => {
                 const rad = (pt.deg - 90) * (Math.PI / 180);
                 const tx = cx + Math.cos(rad) * (radius - 8);
@@ -1199,8 +1250,10 @@
             ctx.lineWidth = 2;
             ctx.stroke();
 
+            // Equalized compass reading font size to match 12% scale of other gauges
+            const compassValFontSize = Math.max(16, Math.round(w * 0.12));
             ctx.fillStyle = skin.digitalColor;
-            ctx.font = 'bold 17px Arial, Helvetica, sans-serif';
+            ctx.font = `bold ${compassValFontSize}px Arial, Helvetica, sans-serif`;
             const cardStr = degToCardinal(degrees);
             ctx.fillText(`${cardStr} (${String(Math.round(degrees)).padStart(3, '0')}°)`, cx, cy + radius * 0.42);
         }
@@ -1672,11 +1725,8 @@
                         weatherData.rainWeekly = lastData.weeklyrainin || 0;
                         weatherData.rainMonthly = lastData.monthlyrainin || 0;
 
-                        if (lastData.lastRain) {
-                            weatherData.rainLastTimeStr = new Date(lastData.lastRain).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                        } else if (lastData.dateutc) {
-                            weatherData.rainLastTimeStr = new Date(lastData.dateutc).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                        }
+                        // Preserve your exact station rain time ("3:05 PM") instead of letting API UTC conversion override it
+                        // weatherData.rainLastTimeStr = ...;
 
                         weatherData.solar = lastData.solarradiation || 0;
                         weatherData.uv = lastData.uv || 0;
@@ -1721,6 +1771,14 @@
             }
         };
 
+        window.forceRefreshConnection = function() {
+            const icon = document.getElementById('refresh-icon');
+            if (icon) icon.classList.add('fa-spin');
+            setTimeout(() => {
+                location.reload();
+            }, 300);
+        };
+
         function populateStationDropdown() {
             const selectEl = document.getElementById('setting-station-select');
             if (!selectEl) return;
@@ -1747,6 +1805,8 @@
             const rainUnitInput = document.getElementById('setting-rain-unit');
             const fontSizeInput = document.getElementById('setting-digital-font-size');
             const fontSizeLbl = document.getElementById('lbl-digital-font-size');
+            const gaugeScaleInput = document.getElementById('setting-gauge-scale');
+            const gaugeScaleLbl = document.getElementById('lbl-gauge-scale');
             const refreshInput = document.getElementById('setting-refresh-interval');
 
             if (nameInput) nameInput.value = st.name;
@@ -1760,6 +1820,8 @@
             if (rainUnitInput) rainUnitInput.value = st.rainUnit || currentRainUnit;
             if (fontSizeInput) fontSizeInput.value = st.digitalFontSize || 40;
             if (fontSizeLbl) fontSizeLbl.innerText = (st.digitalFontSize || 40) + "px";
+            if (gaugeScaleInput) gaugeScaleInput.value = st.gaugeScale || 240;
+            if (gaugeScaleLbl) gaugeScaleLbl.innerText = (st.gaugeScale || 240) + "px";
             if (refreshInput) refreshInput.value = st.refreshInterval || refreshIntervalMs;
         }
 
@@ -1774,6 +1836,7 @@
             const windUnitInput = document.getElementById('setting-wind-unit');
             const rainUnitInput = document.getElementById('setting-rain-unit');
             const fontSizeInput = document.getElementById('setting-digital-font-size');
+            const gaugeScaleInput = document.getElementById('setting-gauge-scale');
             const refreshInput = document.getElementById('setting-refresh-interval');
 
             if (config.stations[config.activeStationIndex]) {
@@ -1788,6 +1851,7 @@
                 if (windUnitInput) st.windUnit = windUnitInput.value;
                 if (rainUnitInput) st.rainUnit = rainUnitInput.value;
                 if (fontSizeInput) st.digitalFontSize = parseInt(fontSizeInput.value);
+                if (gaugeScaleInput) st.gaugeScale = parseInt(gaugeScaleInput.value);
                 if (refreshInput) st.refreshInterval = parseInt(refreshInput.value);
             }
         }
@@ -1799,6 +1863,8 @@
             if (st.windUnit) window.setWindUnit(st.windUnit);
             if (st.rainUnit) window.setRainUnit(st.rainUnit);
             if (st.digitalFontSize) setDigitalFontSize(st.digitalFontSize);
+            if (st.gaugeScale) setGaugeScale(st.gaugeScale);
+            else setGaugeScale(240);
             if (st.refreshInterval) {
                 refreshIntervalMs = st.refreshInterval;
             }
