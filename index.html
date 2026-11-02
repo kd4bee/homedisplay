@@ -3,1193 +3,1968 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KD4BEE WX Weather Widget</title>
-    
-    <!-- Robust PWA Manifest & External Icon Links for Android/iOS Home Screen Shortcuts -->
+    <title>Christy's Weather Station - WS-2902 Live Monitor</title>
+
+    <!-- Robust PWA Manifest & Chrome App Installation Icons -->
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
-    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"KD4BEE WX","short_name":"KD4BEE WX","start_url":".","display":"standalone","background_color":"%23020617","theme_color":"%23020617","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1163/1163624.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Christy\'s Weather Station","short_name":"Christy WX","start_url":".","display":"standalone","background_color":"%230e131d","theme_color":"%230e131d","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1163/1163624.png","sizes":"512x512","type":"image/png"}]}'>
 
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for weather icons -->
+    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js for History & Forecast Graphs -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
+        :root {
+            --bg-dark: #0e131d;
+            --panel-bg: #182030;
+            --panel-border: #2a3854;
+            --panel-header: #202b42;
+            --neon-cyan: #00f0ff;
+            --neon-green: #00ff66;
+            --neon-yellow: #ffee00;
+            --neon-red: #ff3355;
+            --led-off: #1b2633;
+            --digital-font-size: 40px;
+            --gauge-scale: 240px;
+        }
+
         body {
-            background: #020617;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            color: #f8fafc;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+            font-family: Arial, Helvetica, sans-serif;
+            background-image: radial-gradient(#1e293b 1px, transparent 1px);
+            background-size: 24px 24px;
         }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+
+        .wd-panel {
+            background: linear-gradient(145deg, #182133, #121927);
+            border: 2px solid var(--panel-border);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08), 0 6px 16px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
         }
-        .glass-card {
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(56, 189, 248, 0.15);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        .wd-header-bar {
+            background: linear-gradient(180deg, #2a3a5c, #1a243a);
+            border-bottom: 1px solid #3b4f7a;
+            text-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
         }
-        .glass-card:active {
-            transform: scale(0.97);
-            border-color: rgba(56, 189, 248, 0.5);
+
+        .led-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
         }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(56, 189, 248, 0.3);
-            border-radius: 4px;
+
+        .led-green { background-color: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
+        .led-yellow { background-color: var(--neon-yellow); box-shadow: 0 0 8px var(--neon-yellow); }
+        .led-red { background-color: var(--neon-red); box-shadow: 0 0 8px var(--neon-red); }
+        .led-off { background-color: var(--led-off); }
+
+        /* Crisp clock font styling without blur or heavy glow */
+        .crisp-clock {
+            text-shadow: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .animate-spin-fast {
-            animation: spin 0.6s linear infinite;
+
+        canvas.gauge-canvas {
+            width: var(--gauge-scale) !important;
+            height: var(--gauge-scale) !important;
+            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.6));
+            transition: width 0.2s ease, height 0.2s ease;
         }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+
+        .digital-readout-large {
+            font-size: var(--digital-font-size, 40px);
+            line-height: 1.1;
         }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0e131d; }
+        ::-webkit-scrollbar-thumb { background: #2a3854; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
+<body class="min-h-screen flex flex-col justify-between p-2 md:p-4 text-sm md:text-base select-none">
 
-    <!-- Mobile Screen Frame (S21+ Aspect Ratio & Width Optimized) -->
-    <div class="w-full max-w-[390px] mx-auto flex flex-col gap-3 my-auto">
-
-        <!-- Top Header: Title & Time/Date -->
-        <div class="glass-panel rounded-2xl p-3 flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-xl bg-sky-500/20 flex items-center justify-center border border-sky-400/40 text-sky-400">
-                        <i class="fa-solid fa-tower-cell text-sm"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xs font-bold tracking-wide text-sky-200 flex items-center gap-1.5">
-                            <span id="stationTitleDisplay">KD4BEE WX</span>
-                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" id="connectionIndicator"></span>
-                        </h1>
-                        <p class="text-[9px] text-slate-400"><span id="stationLocationDisplay">Interlachen, FL</span> • Weather Station</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="openSettingsModal()" class="w-7 h-7 rounded-lg bg-slate-800/80 flex items-center justify-center text-slate-400 hover:text-sky-300 border border-slate-700 transition cursor-pointer">
-                        <i class="fa-solid fa-gear text-xs"></i>
-                    </button>
-                    <!-- Increased text size for UTC time -->
-                    <span class="text-xs font-mono font-semibold text-sky-300 bg-slate-800/80 px-2.5 py-1 rounded border border-sky-500/20" id="utcTimeDisplay">--:--:-- UTC</span>
-                </div>
+    <header class="wd-panel mb-3 p-3 md:p-4 flex flex-wrap items-center justify-between gap-4">
+        <!-- Title & App Branding -->
+        <div class="flex items-center gap-3">
+            <div class="bg-cyan-950/80 p-2.5 border border-cyan-500/40 rounded-lg shadow-inner">
+                <i class="fa-solid font-bold fa-bolt-lightning text-cyan-400 text-2xl md:text-3xl animate-pulse"></i>
             </div>
-
-            <div class="flex justify-between items-end pt-1 border-t border-slate-700/50">
-                <div>
-                    <div class="text-2xl font-black text-white tracking-tight leading-none flex items-baseline gap-1">
-                        <span id="localTimeDisplay">--:--:--</span>
-                        <span class="text-xs font-bold text-sky-400" id="localAmPm">--</span>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <div class="text-xs font-semibold text-slate-200" id="localDateDisplay">Loading date...</div>
-                    <div class="text-[9px] text-slate-400 flex items-center justify-end gap-1">
-                        <i class="fa-solid fa-clock-rotate-left"></i> <span id="lastUpdatedDisplay">Syncing...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- OUTDOOR TEMPERATURE, HUMIDITY & STATS CARD -->
-        <div class="glass-card rounded-2xl p-3.5 relative overflow-hidden">
-            <div class="flex items-center justify-between">
-                <!-- 1. Temperature Block (Left) - Clickable -->
-                <div onclick="openHistoryModal('outdoor_temp')" class="flex items-center gap-2 cursor-pointer hover:opacity-80 transition">
-                    <div class="text-3xl text-sky-400 filter drop-shadow" id="weatherIconContainer">
-                        <i class="fa-solid fa-sun"></i>
-                    </div>
-                    <div>
-                        <div class="text-[9px] uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1">
-                            Temp <i class="fa-solid fa-chart-line text-[8px] text-sky-400"></i>
-                        </div>
-                        <div class="flex items-baseline">
-                            <span class="text-3xl font-black tracking-tighter text-white" id="tempDisplay">--</span>
-                            <span class="text-sm font-bold text-sky-400 ml-0.5" id="tempUnitLabel">°F</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Humidity Block (Middle, Large Font) - Clickable -->
-                <div onclick="openHistoryModal('outdoor_humidity')" class="text-center px-2 border-x border-slate-700/50 cursor-pointer hover:opacity-80 transition">
-                    <div class="text-[9px] uppercase font-bold tracking-wider text-blue-400 flex items-center justify-center gap-1">
-                        Humidity <i class="fa-solid fa-chart-line text-[8px] text-blue-400"></i>
-                    </div>
-                    <div class="flex items-baseline justify-center">
-                        <span class="text-3xl font-black tracking-tighter text-blue-300" id="humidityDisplay">--</span>
-                        <span class="text-sm font-bold text-blue-400 ml-0.5">%</span>
-                    </div>
-                </div>
-
-                <!-- 3. Other Data & History Prompt (Right) - Clickable -->
-                <div onclick="openHistoryModal('outdoor_temp')" class="text-right cursor-pointer hover:opacity-80 transition">
-                    <div class="text-[10px] text-slate-300 font-medium">
-                        Dew: <span id="dewPointDisplay" class="text-white">--</span>
-                    </div>
-                    <div class="text-[10px] text-sky-300 font-medium mt-0.5">
-                        Feels <strong id="feelsLikeDisplay" class="text-white">--</strong>
-                    </div>
-                    <div class="text-[8px] text-slate-400 mt-0.5">Tap for history &rarr;</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- INDOOR TEMPERATURE & HUMIDITY BLOCKS -->
-        <div class="grid grid-cols-2 gap-2.5">
-            <div onclick="openHistoryModal('indoor_temp')" class="glass-card rounded-2xl p-3 flex items-center gap-2.5 cursor-pointer">
-                <div class="w-8 h-8 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 text-sm shrink-0 border border-orange-500/30">
-                    <i class="fa-solid fa-house-chimney text-xs"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-[9px] uppercase font-bold text-slate-400">Indoor Temp</div>
-                    <div class="text-base font-bold text-white truncate"><span id="indoorTempDisplay">--</span> <span class="text-xs font-normal text-slate-400" id="indoorTempUnit">°F</span></div>
-                </div>
-            </div>
-            <div onclick="openHistoryModal('indoor_humidity')" class="glass-card rounded-2xl p-3 flex items-center gap-2.5 cursor-pointer">
-                <div class="w-8 h-8 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-300 text-sm shrink-0 border border-teal-500/30">
-                    <i class="fa-solid fa-droplet text-xs"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-[9px] uppercase font-bold text-slate-400">Indoor Humidity</div>
-                    <div class="text-base font-bold text-white truncate"><span id="indoorHumidityDisplay">--</span> <span class="text-xs font-normal text-slate-400">%</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- WIND & SOLAR RADIATION GRID -->
-        <div class="grid grid-cols-2 gap-2.5">
-            <div onclick="openHistoryModal('wind')" class="glass-card rounded-2xl p-3 flex items-center gap-2.5 cursor-pointer">
-                <div class="w-8 h-8 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-400 text-sm shrink-0 border border-sky-500/30">
-                    <i class="fa-solid fa-location-arrow text-xs transition-transform duration-500" id="windDirectionIcon"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-[9px] uppercase font-bold text-slate-400 truncate">Wind (<span id="windDirText">--</span>)</div>
-                    <div class="text-base font-bold text-white flex items-center gap-1.5 truncate">
-                        <span><span id="windSpeedDisplay">--</span> <span class="text-[10px] font-normal text-slate-400" id="windUnitLabel">mph</span></span>
-                        <i class="fa-solid fa-location-arrow text-xs text-sky-400 transition-transform duration-500 shrink-0" id="windSpeedArrowIcon"></i>
-                    </div>
-                    <div class="text-[9px] text-slate-400 truncate">Gust: <span id="windGustDisplay">--</span> <span id="windGustUnit">mph</span></div>
-                </div>
-            </div>
-
-            <div onclick="openHistoryModal('solar')" class="glass-card rounded-2xl p-3 flex items-center gap-2.5 cursor-pointer">
-                <div class="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 text-sm shrink-0 border border-amber-500/30">
-                    <i class="fa-solid fa-sun text-xs"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-[9px] uppercase font-bold text-slate-400 truncate">Solar Radiation</div>
-                    <div class="text-base font-bold text-white truncate"><span id="solarDisplay">--</span> <span class="text-[10px] font-normal text-slate-400">W/m²</span></div>
-                    <div class="text-[9px] text-slate-400 truncate">UV Index: <span id="uvDisplay" class="text-amber-300 font-bold">--</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PRESSURE & RAIN GRID -->
-        <div class="grid grid-cols-2 gap-2.5">
-            <div onclick="openHistoryModal('pressure')" class="glass-card rounded-2xl p-3 flex items-center gap-2.5 cursor-pointer">
-                <div class="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 text-sm shrink-0 border border-purple-500/30">
-                    <i class="fa-solid fa-gauge-high text-xs"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-[9px] uppercase font-bold text-slate-400">Barometer</div>
-                    <div class="text-base font-bold text-white truncate"><span id="pressureDisplay">--</span> <span class="text-[10px] font-normal text-slate-400" id="pressureUnitLabel">hPa</span></div>
-                    <div class="text-[9px] text-emerald-400 truncate" id="pressureTrend">Steady</div>
-                </div>
-            </div>
-
-            <div onclick="openHistoryModal('rain')" class="glass-card rounded-2xl p-3 flex items-center gap-2.5 cursor-pointer">
-                <div class="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300 text-sm shrink-0 border border-indigo-500/30">
-                    <i class="fa-solid fa-cloud-showers-heavy text-xs"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-[9px] uppercase font-bold text-slate-400">Rainfall</div>
-                    <div class="text-base font-bold text-white truncate"><span id="rainHourlyDisplay">--</span> <span class="text-[10px] font-normal text-slate-400" id="rainUnitLabel">in/h</span></div>
-                    <div class="text-[9px] text-slate-400 truncate">Day: <span id="rainDayDisplay">--</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 7-DAY FORECAST PANE -->
-        <div class="glass-panel rounded-2xl p-3 flex flex-col gap-2">
-            <div class="flex items-center justify-between border-b border-slate-700/60 pb-1.5">
-                <div class="text-[10px] uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1">
-                    <i class="fa-solid fa-calendar-week text-sky-400"></i> Interlachen 7-Day Forecast
-                </div>
-                <span class="text-[9px] text-sky-400 flex items-center gap-0.5"><i class="fa-solid fa-hand-pointer"></i> Tap day</span>
-            </div>
-            <div class="grid grid-cols-7 gap-1 text-center" id="forecastGrid">
-                <!-- Dynamically populated -->
-            </div>
-        </div>
-
-        <!-- Bottom Controls Bar -->
-        <div class="flex justify-between items-center text-[11px] text-slate-400 px-2 pt-1">
-            <span class="hover:text-sky-400 cursor-pointer flex items-center gap-1" onclick="refreshData()"><i class="fa-solid fa-rotate" id="refreshIcon"></i> Refresh Data</span>
-            <span class="hover:text-sky-400 cursor-pointer flex items-center gap-1" onclick="openSettingsModal()"><i class="fa-solid fa-wifi"></i> Mode: <span id="modeLabel" class="font-bold text-sky-300">LIVE</span></span>
-        </div>
-
-    </div>
-
-    <!-- HISTORY / FORECAST POPUP MODAL -->
-    <div id="historyModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
-        <div class="glass-panel w-full max-w-sm rounded-3xl p-5 flex flex-col gap-3 border border-sky-500/30 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            
-            <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                <div>
-                    <h3 class="font-bold text-sm text-sky-200 flex items-center gap-1.5" id="modalTitle">
-                        <i class="fa-solid fa-chart-line text-sky-400"></i> Detail View
-                    </h3>
-                    <p class="text-[10px] text-slate-400" id="modalSubTitle">12-Hour Trends & Detailed Stats</p>
-                </div>
-                <button onclick="closeHistoryModal()" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white border border-slate-700 cursor-pointer">
-                    <i class="fa-solid fa-xmark text-sm"></i>
-                </button>
-            </div>
-
-            <!-- Modal Quick Summary Cards -->
-            <div class="grid grid-cols-3 gap-2 text-center" id="modalStatsGrid">
-                <div class="bg-slate-800/60 p-2 rounded-xl border border-slate-700">
-                    <div class="text-[9px] uppercase text-slate-400" id="statLabel1">High / Max</div>
-                    <div class="text-sm font-bold text-emerald-400" id="statHigh">--</div>
-                </div>
-                <div class="bg-slate-800/60 p-2 rounded-xl border border-slate-700">
-                    <div class="text-[9px] uppercase text-slate-400" id="statLabel2">Low / Min</div>
-                    <div class="text-sm font-bold text-sky-400" id="statLow">--</div>
-                </div>
-                <div class="bg-slate-800/60 p-2 rounded-xl border border-slate-700">
-                    <div class="text-[9px] uppercase text-slate-400" id="statLabel3">Average</div>
-                    <div class="text-sm font-bold text-amber-300" id="statAvg">--</div>
-                </div>
-            </div>
-
-            <!-- Chart Container -->
-            <div class="w-full h-48 bg-slate-900/80 rounded-xl p-2 border border-slate-800" id="chartWrapper">
-                <canvas id="historyChart"></canvas>
-            </div>
-
-            <!-- Forecast Detailed Text Description Container -->
-            <div class="hidden bg-slate-800/40 p-3 rounded-xl border border-slate-700/60 text-xs text-slate-200 leading-relaxed" id="forecastDetailText"></div>
-
-            <!-- History Raw Data List (Scrollable 10-min logs) -->
-            <div class="flex flex-col gap-1" id="recentReadingsGroup">
-                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" id="readingsLogTitle">Readings Log (12 Hours)</div>
-                <div class="max-h-40 overflow-y-auto flex flex-col gap-1 text-[11px]" id="modalDataList"></div>
-            </div>
-
-            <button onclick="closeHistoryModal()" class="w-full py-2 rounded-xl bg-sky-600/80 hover:bg-sky-600 text-white font-semibold text-xs border border-sky-400/40 cursor-pointer">
-                Close
-            </button>
-        </div>
-    </div>
-
-    <!-- SETTINGS MODAL -->
-    <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
-        <div class="glass-panel w-full max-w-sm rounded-3xl p-5 flex flex-col gap-3 border border-sky-500/30 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                <h3 class="font-bold text-sm text-sky-200 flex items-center gap-1.5">
-                    <i class="fa-solid fa-sliders text-sky-400"></i> Widget Settings
-                </h3>
-                <button onclick="closeSettingsModal()" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white border border-slate-700 cursor-pointer">
-                    <i class="fa-solid fa-xmark text-sm"></i>
-                </button>
-            </div>
-
-            <!-- Mode Switcher -->
-            <div class="flex flex-col gap-1">
-                <label class="text-[10px] font-bold text-slate-400 uppercase">Data Mode</label>
-                <div class="grid grid-cols-2 gap-2 bg-slate-800/60 p-1 rounded-xl border border-slate-700">
-                    <button id="modeLiveBtn" onclick="setMode(true)" class="py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">LIVE API</button>
-                    <button id="modeDemoBtn" onclick="setMode(false)" class="py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">DEMO MODE</button>
-                </div>
-            </div>
-
-            <!-- Station Manager Section -->
-            <div class="flex flex-col gap-2 bg-slate-800/50 p-3 rounded-2xl border border-slate-700">
-                <div class="flex items-center justify-between">
-                    <label class="text-[10px] font-bold text-sky-400 uppercase">Weather Station Manager</label>
-                    <button type="button" onclick="addNewStation()" class="text-[10px] text-sky-300 hover:text-white bg-sky-600/40 px-2 py-0.5 rounded border border-sky-500/30 transition cursor-pointer">
-                        <i class="fa-solid fa-plus"></i> Add New Station
-                    </button>
-                </div>
-                <div>
-                    <label class="text-[9px] font-bold text-slate-400 uppercase">Select Active Station</label>
-                    <select id="settingStationSelect" onchange="onStationDropdownChange()" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1">
-                        <!-- Populated dynamically -->
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[9px] font-bold text-slate-400 uppercase">Station Name</label>
-                    <input type="text" id="settingStationName" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1">
-                </div>
-                <div>
-                    <label class="text-[9px] font-bold text-slate-400 uppercase">City, State / Location</label>
-                    <input type="text" id="settingStationLocation" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1" placeholder="e.g. Interlachen, FL">
-                </div>
-                <div>
-                    <label class="text-[9px] font-bold text-slate-400 uppercase">Ambient API Key</label>
-                    <input type="text" id="settingApiKey" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-[10px] font-mono text-white focus:outline-none focus:border-sky-400 mt-1">
-                </div>
-                <div>
-                    <label class="text-[9px] font-bold text-slate-400 uppercase">Application Key</label>
-                    <input type="text" id="settingAppKey" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-[10px] font-mono text-white focus:outline-none focus:border-sky-400 mt-1">
-                </div>
-                <div class="flex justify-end pt-1">
-                    <button type="button" onclick="deleteCurrentStation()" class="text-[10px] text-red-400 hover:text-red-300 transition cursor-pointer">
-                        <i class="fa-solid fa-trash"></i> Delete This Station
-                    </button>
-                </div>
-            </div>
-
-            <!-- Units Config -->
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Temp Unit</label>
-                    <select id="settingTempUnit" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1">
-                        <option value="F">Fahrenheit (°F)</option>
-                        <option value="C">Celsius (°C)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Pressure Unit</label>
-                    <select id="settingPressUnit" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1">
-                        <option value="hPa">Hectopascals (hPa)</option>
-                        <option value="inHg">Inches Mercury (inHg)</option>
-                        <option value="mmHg">Millimeters Mercury (mmHg)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Wind Unit</label>
-                    <select id="settingWindUnit" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1">
-                        <option value="mph">MPH</option>
-                        <option value="kmh">km/h</option>
-                        <option value="kt">Knots</option>
-                        <option value="ms">m/s</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">Rain Unit</label>
-                    <select id="settingRainUnit" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1">
-                        <option value="in">Inches (in)</option>
-                        <option value="mm">Millimeters (mm)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Refresh Rate -->
             <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase">Refresh Interval</label>
-                <select id="settingRefreshInterval" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-sky-400 mt-1">
-                    <option value="15000">15 Seconds</option>
-                    <option value="60000">1 Minute</option>
-                    <option value="300000">5 Minutes</option>
-                </select>
+                <h1 class="text-lg md:text-2xl font-bold tracking-wider text-cyan-400 uppercase flex items-center gap-2">
+                    <span id="display-station-name">KD4BEE WX</span>
+                    <span class="text-xs bg-cyan-950 text-cyan-300 border border-cyan-700/50 px-2.5 py-1 rounded">WS-2902</span>
+                </h1>
+                <p class="text-xs md:text-sm text-slate-300 font-bold tracking-tight mt-0.5">
+                    <span id="display-station-loc">Interlachen, FL</span> • STATION LOGGER & LIVE TELEMETRY
+                </p>
+            </div>
+        </div>
+
+        <!-- Clock & Status Bar -->
+        <div class="flex flex-wrap items-center gap-3 text-center">
+            <div class="bg-slate-900/90 px-4 py-2 rounded-lg border border-cyan-500/40 shadow-md">
+                <div class="text-xs text-slate-300 font-bold uppercase tracking-wider">LOCAL TIME</div>
+                <div id="clock-local" class="text-2xl md:text-3xl font-black text-white crisp-clock leading-tight">00:00:00</div>
+            </div>
+            <div class="bg-slate-900/90 px-4 py-2 rounded-lg border border-amber-500/40 shadow-md">
+                <div class="text-xs text-slate-300 font-bold uppercase tracking-wider">UTC CLOCK</div>
+                <div id="clock-utc" class="text-2xl md:text-3xl font-black text-white crisp-clock leading-tight">00:00:00 UTC</div>
+            </div>
+            <div class="bg-slate-900/80 px-3.5 py-2 rounded-lg border border-slate-700/60 flex flex-col justify-center text-left">
+                <div class="flex items-center gap-2">
+                    <span id="status-led" class="led-indicator led-green"></span>
+                    <span class="text-xs text-slate-300 font-bold">SOURCE: <span id="sync-source-badge" class="text-cyan-400 font-bold">Akamai CDN</span></span>
+                </div>
+                <div class="flex items-center justify-between gap-3 mt-0.5">
+                    <div class="text-[11px] text-slate-400 font-mono" id="sync-latency-badge">Lat: --ms</div>
+                    <button onclick="window.forceRefreshConnection()" title="Reload Page & Data" class="text-[11px] text-cyan-300 hover:text-white bg-cyan-950/80 hover:bg-cyan-900 px-2 py-0.5 rounded border border-cyan-700/60 transition flex items-center gap-1 cursor-pointer font-bold shadow-inner">
+                        <i id="refresh-icon" class="fa-solid fa-rotate text-[10px]"></i> Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls / Actions -->
+        <div class="flex items-center gap-2">
+            <button id="toggle-sim-btn" onclick="window.toggleSimulation()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
+                <i class="fa-solid fa-flask text-amber-400"></i>
+                <span id="sim-btn-text">Demo Mode: OFF</span>
+            </button>
+            <button onclick="window.openConfigModal()" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-600/60 text-cyan-300 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
+                <i class="fa-solid fa-sliders"></i> Station Manager
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN DASHBOARD GRID -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-grow">
+
+        <!-- TOP SECTION: 3 Equally Spaced Panes (Wind, Outdoor Temp/Hum, Indoor Temp/Hum) -->
+        <section class="lg:col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-3">
+            
+            <!-- Combined Wind Pane (Speed, Gust, Direction) -->
+            <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
+                <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
+                    <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-wind mr-1.5"></i> WIND SPEED & DIRECTION</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('wind')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-wind">DIGITAL</span>
+                        </button>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button onclick="window.setWindUnit('mph')" id="unit-wind-mph" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">MPH</button>
+                            <button onclick="window.setWindUnit('kmh')" id="unit-wind-kmh" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">KM/H</button>
+                            <button onclick="window.setWindUnit('kts')" id="unit-wind-kts" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">KTS</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-wind-speed" width="240" height="240" class="gauge-canvas gauge-view-wind"></canvas>
+                        <div id="digital-container-wind-speed" class="hidden flex-col items-center justify-center digital-view-wind text-center">
+                            <div id="digital-wind-speed" class="font-black text-cyan-400 digital-readout-large">0.0</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">SPEED (<span class="lbl-wind-unit-str">MPH</span>)</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-wind">Wind Speed</span>
+                    </div>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-wind-dir" width="240" height="240" class="gauge-canvas gauge-view-wind"></canvas>
+                        <div id="digital-container-wind-dir" class="hidden flex-col items-center justify-center digital-view-wind text-center">
+                            <div id="digital-wind-dir" class="font-black text-emerald-400 digital-readout-large">N (000°)</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">DIRECTION</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-wind">Wind Direction</span>
+                    </div>
+                </div>
+                <div class="w-full grid grid-cols-3 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
+                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">SPEED (<span id="lbl-wind-unit" class="lbl-wind-unit-str">MPH</span>)</div>
+                        <div id="val-wind-speed" class="text-lg md:text-xl font-bold text-cyan-400">0.0</div>
+                    </div>
+                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">GUST</div>
+                        <div id="val-wind-gust" class="text-lg md:text-xl font-bold text-amber-400">0.0</div>
+                    </div>
+                    <div class="cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">DIRECTION</div>
+                        <div id="val-wind-cardinal" class="text-base font-bold text-emerald-400">N (000°)</div>
+                    </div>
+                </div>
             </div>
 
-            <button onclick="saveSettings()" class="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs mt-1 transition cursor-pointer">
-                Save & Apply Settings
-            </button>
+            <!-- Outdoor Temp & Humidity Pane -->
+            <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
+                <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
+                    <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-temperature-half mr-1.5"></i> OUTDOOR TEMP & HUM</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('outTemp')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-outTemp">DIGITAL</span>
+                        </button>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button onclick="window.setTempUnit('F')" id="unit-f" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">°F</button>
+                            <button onclick="window.setTempUnit('C')" id="unit-c" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">°C</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-temp" width="240" height="240" class="gauge-canvas gauge-view-outTemp"></canvas>
+                        <div id="digital-container-temp" class="hidden flex-col items-center justify-center digital-view-outTemp text-center">
+                            <div id="digital-temp" class="font-black text-amber-400 digital-readout-large">72.4°F</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">OUTDOOR TEMP</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-outTemp">Temperature</span>
+                    </div>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-out-hum" width="240" height="240" class="gauge-canvas gauge-view-outTemp"></canvas>
+                        <div id="digital-container-out-hum" class="hidden flex-col items-center justify-center digital-view-outTemp text-center">
+                            <div id="digital-out-hum" class="font-black text-emerald-400 digital-readout-large">62%</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">OUTDOOR HUMIDITY</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-outTemp">Humidity</span>
+                    </div>
+                </div>
+                <div class="w-full grid grid-cols-3 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
+                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.toggleUnits()">
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">TEMP</div>
+                        <div id="val-temp" class="text-base md:text-lg font-bold text-amber-400 glow-yellow">72.4°</div>
+                    </div>
+                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition">
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">FEELS / DEW</div>
+                        <div id="val-feels" class="text-xs font-bold text-cyan-400">71.8° / 58.2°</div>
+                    </div>
+                    <div class="cursor-pointer hover:bg-slate-800/50 rounded transition">
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">HUM</div>
+                        <div id="val-out-humidity-digital" class="text-base md:text-lg font-bold text-emerald-400">62%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indoor Temp & Humidity Pane -->
+            <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
+                <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
+                    <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-house-signal mr-1.5"></i> INDOOR TEMP & HUM</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('inTemp')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-inTemp">DIGITAL</span>
+                        </button>
+                        <span class="text-xs text-slate-400">Console</span>
+                    </div>
+                </div>
+                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-in-temp" width="240" height="240" class="gauge-canvas gauge-view-inTemp"></canvas>
+                        <div id="digital-container-in-temp" class="hidden flex-col items-center justify-center digital-view-inTemp text-center">
+                            <div id="digital-in-temp" class="font-black text-cyan-300 digital-readout-large">71.2°F</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">INDOOR TEMP</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-inTemp">Indoor Temp</span>
+                    </div>
+                    <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
+                        <canvas id="gauge-in-hum" width="240" height="240" class="gauge-canvas gauge-view-inTemp"></canvas>
+                        <div id="digital-container-in-hum" class="hidden flex-col items-center justify-center digital-view-inTemp text-center">
+                            <div id="digital-in-hum" class="font-black text-teal-300 digital-readout-large">45%</div>
+                            <div class="text-xs text-slate-400 font-bold uppercase mt-1">INDOOR HUMIDITY</div>
+                        </div>
+                        <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-inTemp">Indoor Hum</span>
+                    </div>
+                </div>
+                <div class="w-full grid grid-cols-2 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
+                    <div class="border-r border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">INDOOR TEMP</div>
+                        <div id="val-in-temp" class="text-base md:text-lg font-bold text-cyan-300">71.2°F</div>
+                    </div>
+                    <div>
+                        <div class="text-[11px] text-slate-300 font-bold uppercase">INDOOR HUMIDITY</div>
+                        <div id="val-in-hum" class="text-base md:text-lg font-bold text-teal-300">45%</div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- SECOND ROW: Barometer on left, Precipitation and Solar/UV on right -->
+        <section class="lg:col-span-5 grid grid-cols-1 gap-3">
+            
+            <!-- Barometer Gauge -->
+            <div class="wd-panel p-3.5 flex flex-col justify-between items-center relative">
+                <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-1">
+                    <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-gauge-high mr-1.5"></i> BAROMETRIC PRESSURE</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.togglePaneDisplay('baro')" title="Toggle Gauge / Digital Mode" class="px-2 py-0.5 rounded bg-slate-800 border border-cyan-500/50 text-cyan-300 text-xs font-bold hover:bg-slate-700">
+                            <i class="fa-solid fa-gauge-high mr-1"></i><span id="btn-toggle-baro">DIGITAL</span>
+                        </button>
+                        <div class="flex items-center gap-1 text-xs">
+                            <button onclick="window.setBaroUnit('hpa')" id="unit-baro-hpa" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500">hPa/mb</button>
+                            <button onclick="window.setBaroUnit('inhg')" id="unit-baro-inhg" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700">inHg</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative w-full flex justify-center items-center py-1 min-h-[200px]">
+                    <canvas id="gauge-baro" width="240" height="240" class="gauge-canvas gauge-view-baro"></canvas>
+                    <div id="digital-container-baro" class="hidden flex-col items-center justify-center digital-view-baro text-center py-6">
+                        <div id="digital-baro" class="font-black text-emerald-400 digital-readout-large">1013.2 hPa</div>
+                        <div class="text-xs text-slate-400 font-bold uppercase mt-1">BAROMETRIC PRESSURE</div>
+                    </div>
+                </div>
+                <div class="w-full grid grid-cols-2 gap-1.5 mt-1 text-center bg-slate-900/70 p-2 rounded-lg border border-slate-800">
+                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.setBaroUnit('hpa')">
+                        <div class="text-xs text-slate-300 font-bold uppercase">HPA / MB</div>
+                        <div id="val-baro-hpa" class="text-base font-bold text-emerald-400">1013.2</div>
+                    </div>
+                    <div class="cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.setBaroUnit('inhg')">
+                        <div class="text-xs text-slate-300 font-bold uppercase">INHG</div>
+                        <div id="val-baro-inhg" class="text-base font-bold text-cyan-400">29.92</div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <section class="lg:col-span-7 flex flex-col gap-3">
+            
+            <!-- Precipitation & Solar/UV Pane (Stacked Side by Side) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Enhanced Rain Data Panel with Dynamic View Selector Dropdown -->
+                <div class="wd-panel p-3.5 flex flex-col justify-between">
+                    <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
+                        <span class="font-bold text-cyan-300 text-xs tracking-wider"><i class="fa-solid fa-cloud-rain mr-1"></i> RAIN DATA</span>
+                        <div class="flex items-center gap-1.5 text-[11px]">
+                            <!-- Feature Mode Selector Dropdown -->
+                            <select id="rain-mode-select" onchange="window.setRainViewMode(this.value)" class="bg-slate-900 text-cyan-300 border border-slate-700 rounded px-1.5 py-0.5 font-bold focus:outline-none focus:border-cyan-500">
+                                <option value="liquid">1. Liquid Gauge View</option>
+                                <option value="rate">2. Rate & Intensity</option>
+                                <option value="extended" selected>3. Extended Totals</option>
+                                <option value="chart">4. Historical Bar Chart</option>
+                                <option value="tracker">5. Storm Tracker</option>
+                            </select>
+
+                            <button onclick="window.setRainUnit('in')" id="unit-rain-in" class="px-1.5 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer">IN</button>
+                            <button onclick="window.setRainUnit('mm')" id="unit-rain-mm" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer">MM</button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic View Container -->
+                    <div id="rain-view-container" class="min-h-[140px] flex flex-col justify-center">
+                        <!-- Content dynamically rendered via renderRainView() -->
+                    </div>
+                </div>
+
+                <!-- Solar & UV Data -->
+                <div class="wd-panel p-3.5 flex flex-col justify-between">
+                    <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
+                        <span class="font-bold text-cyan-300 text-xs tracking-wider"><i class="fa-solid fa-sun mr-1"></i> SOLAR & UV</span>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                            <div class="text-[11px] text-slate-300 font-bold">SOLAR RADIATION</div>
+                            <div id="val-solar" class="text-base font-bold text-amber-300">485 W/m²</div>
+                        </div>
+                        <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                            <div class="text-[11px] text-slate-300 font-bold">UV INDEX</div>
+                            <div id="val-uv" class="text-base font-bold text-emerald-400">3 (MOD)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Telemetry Summary & Status Board -->
+            <div class="wd-panel p-3.5 flex flex-col justify-between">
+                <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
+                    <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-house-signal mr-1.5"></i> STATION TELEMETRY SUMMARY</span>
+                </div>
+
+                <!-- Classic LED Status Board -->
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 grid grid-cols-2 gap-x-3 gap-y-2 text-xs font-bold my-auto">
+                    <div class="flex items-center gap-2"><span class="led-indicator led-green"></span> LOGGING ACTIVE</div>
+                    <div class="flex items-center gap-2"><span class="led-indicator led-green" id="led-api-status"></span> API LINK OK</div>
+                    <div class="flex items-center gap-2"><span class="led-indicator led-green"></span> SENSOR BATTERY</div>
+                    <div class="flex items-center gap-2"><span class="led-indicator led-off" id="led-rain-flag"></span> RAIN DETECTED</div>
+                </div>
+            </div>
+
+        </section>
+
+        <section class="lg:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <!-- Wind Telemetry Graph -->
+            <div class="wd-panel p-3.5">
+                <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
+                    <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-chart-line mr-1.5"></i> REAL-TIME WIND TELEMETRY HISTORY</span>
+                    <span class="text-xs text-slate-300 font-bold">LAST 15 SAMPLES</span>
+                </div>
+                <div class="h-48 relative">
+                    <canvas id="chart-wind"></canvas>
+                </div>
+            </div>
+
+            <!-- Temperature & Barometer Graph -->
+            <div class="wd-panel p-3.5">
+                <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
+                    <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-chart-area mr-1.5"></i> TEMPERATURE & BARO TRENDS</span>
+                    <span class="text-xs text-slate-300 font-bold">HISTORICAL LOG</span>
+                </div>
+                <div class="h-48 relative">
+                    <canvas id="chart-temp-baro"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-3 text-center text-xs text-slate-400 font-bold flex justify-between items-center border-t border-slate-800/80 pt-2.5">
+        <div>CHRISTY'S WEATHER STATION WS-2902 TELEMETRY MONITOR &copy; 2026 ENGINE</div>
+        <div id="last-update-time">LAST PACKET: JUST NOW</div>
+    </footer>
+
+    <!-- Weather Station Manager Modal -->
+    <div id="config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="wd-panel max-w-md w-full p-5 border-cyan-500/50 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-4">
+                <h3 class="text-base md:text-lg font-bold text-cyan-300 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> WEATHER STATION MANAGER
+                </h3>
+                <button onclick="window.closeConfigModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="space-y-4 text-xs md:text-sm font-bold">
+                <!-- Station Selector & Add Button -->
+                <div class="flex flex-col gap-2 bg-slate-900/60 p-3.5 rounded-lg border border-slate-800">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-cyan-400 uppercase">Active Station Profile</label>
+                        <button type="button" onclick="window.addNewStation()" class="text-xs text-cyan-300 hover:text-white bg-cyan-950 px-2.5 py-1 rounded border border-cyan-700 transition cursor-pointer">
+                            <i class="fa-solid fa-plus"></i> Add New Station
+                        </button>
+                    </div>
+                    <div>
+                        <select id="setting-station-select" onchange="window.onStationDropdownChange()" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs md:text-sm text-white focus:outline-none focus:border-cyan-500">
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Active Station Settings Form -->
+                <div class="space-y-3 bg-slate-900/60 p-3.5 rounded-lg border border-slate-800">
+                    <div>
+                        <label class="block text-slate-300 mb-1">STATION NAME</label>
+                        <input type="text" id="setting-station-name" placeholder="e.g. KD4BEE WX" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">CITY, STATE / LOCATION (Used if keys are blank)</label>
+                        <input type="text" id="setting-station-location" placeholder="e.g. Interlachen, FL" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">DEVICE MAC ADDRESS (OPTIONAL)</label>
+                        <input type="text" id="setting-mac-addr" placeholder="Leave blank if using location mode" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">AMBIENT API KEY (OPTIONAL)</label>
+                        <input type="text" id="setting-api-key" placeholder="Enter Ambient Weather API Key" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">APPLICATION KEY (OPTIONAL)</label>
+                        <input type="text" id="setting-app-key" placeholder="Enter Ambient Weather Application Key" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                    </div>
+
+                    <!-- Unit Preferences & Refresh Interval selectors -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <div>
+                            <label class="block text-slate-300 mb-1">TEMP UNIT</label>
+                            <select id="setting-temp-unit" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                                <option value="F">Fahrenheit (°F)</option>
+                                <option value="C">Celsius (°C)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-300 mb-1">PRESSURE UNIT</label>
+                            <select id="setting-baro-unit" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                                <option value="hpa">Hectopascals (hPa)</option>
+                                <option value="inhg">Inches of Mercury (inHg)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <div>
+                            <label class="block text-slate-300 mb-1">WIND UNIT</label>
+                            <select id="setting-wind-unit" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                                <option value="mph">MPH</option>
+                                <option value="kmh">KM/H</option>
+                                <option value="kts">Knots</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-300 mb-1">RAIN UNIT</label>
+                            <select id="setting-rain-unit" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                                <option value="in">Inches (in)</option>
+                                <option value="mm">Millimeters (mm)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Gauge Size / Zoom Slider -->
+                    <div class="pt-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-slate-300">GAUGE SIZE (ZOOM)</label>
+                            <span id="lbl-gauge-scale" class="text-cyan-400 font-bold">240px</span>
+                        </div>
+                        <input type="range" id="setting-gauge-scale" min="150" max="380" step="10" value="240" oninput="document.getElementById('lbl-gauge-scale').innerText = this.value + 'px'" class="w-full accent-cyan-400 cursor-pointer">
+                        <p class="text-[10px] text-slate-400 mt-0.5">Enlarges all analog gauge dials equally and adapts panes.</p>
+                    </div>
+
+                    <!-- Digital Display Font Size Slider -->
+                    <div class="pt-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-slate-300">DIGITAL DISPLAY FONT SIZE</label>
+                            <span id="lbl-digital-font-size" class="text-cyan-400 font-bold">40px</span>
+                        </div>
+                        <input type="range" id="setting-digital-font-size" min="20" max="100" value="40" oninput="document.getElementById('lbl-digital-font-size').innerText = this.value + 'px'" class="w-full accent-cyan-400 cursor-pointer">
+                        <p class="text-[10px] text-slate-400 mt-0.5">Scales digital readouts for easy viewing across the room.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-slate-300 mb-1">REFRESH INTERVAL</label>
+                        <select id="setting-refresh-interval" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                            <option value="15000">15 Seconds</option>
+                            <option value="60000">1 Minute</option>
+                            <option value="300000">5 Minutes</option>
+                        </select>
+                    </div>
+
+                    <div class="flex justify-end pt-1">
+                        <button type="button" onclick="window.deleteCurrentStation()" class="text-xs text-rose-400 hover:text-rose-300 transition cursor-pointer">
+                            <i class="fa-solid fa-trash"></i> Delete This Station
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-cyan-950/40 p-3 rounded-lg border border-cyan-800/40 text-xs text-slate-300 space-y-1">
+                    <p class="text-cyan-300 font-bold"><i class="fa-solid fa-circle-info mr-1"></i> Multi-Station API & Location Fallback</p>
+                    <p class="font-normal">If API keys are left blank, the system automatically fetches live weather data using Open-Meteo geocoding for the station's City & State!</p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="window.closeConfigModal()" class="px-3.5 py-1.5 rounded bg-slate-800 text-slate-300 font-bold">Cancel</button>
+                    <button type="button" onclick="window.saveStationSettings()" class="px-4 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold">Save & Apply Settings</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        let timeOffsetMs = 0;
+        let refreshIntervalMs = 16000;
+        let isSimulation = false;
+        let updateInterval = null;
+        let digitalFontSize = 40;
+        let gaugeScaleSize = 240;
+
+        let paneModes = {
+            wind: 'gauge',
+            outTemp: 'gauge',
+            inTemp: 'gauge',
+            baro: 'gauge'
+        };
+
+        let currentTempUnit = 'F';
+        let currentBaroUnit = 'hpa';
+        let currentWindUnit = 'mph';
+        let currentRainUnit = 'in';
+        let activeRainMode = 'extended';
+
+        let windChart = null;
+        let tempBaroChart = null;
+        let rainBarChart = null;
+        const maxChartHistory = 15;
+
         let config = {
             stations: [
                 {
                     name: "KD4BEE WX",
                     location: "Interlachen, FL",
+                    macAddress: "8C:4F:00:4F:35:B2", 
                     apiKey: "546a87af80fb4cc19b43ed1d5d4bbaee7fa6f175baf44f3082d450f706ffbf89",
-                    appKey: "7f76b38b64504544a02cdbf031215121118ab04e557547b7ba2a0c0f2ff6a688"
+                    appKey: "7f76b38b64504544a02cdbf031215121118ab04e557547b7ba2a0c0f2ff6a688",
+                    tempUnit: "F",
+                    baroUnit: "hpa",
+                    windUnit: "mph",
+                    rainUnit: "in",
+                    digitalFontSize: 40,
+                    gaugeScale: 240,
+                    refreshInterval: 15000
+                },
+                {
+                    name: "Cherry Mountain",
+                    location: "Cherry Mountain, NC",
+                    macAddress: "E0:98:06:A3:3D:1D",
+                    apiKey: "e628b3ba1253449591bc9bf5ebf32bee35017ec8e9b74666b26e50763fd21728",
+                    appKey: "79231481a76f48b1a2f8e642d1e51ab4961283ee51564dbab14b945fdf3e6f37",
+                    tempUnit: "F",
+                    baroUnit: "hpa",
+                    windUnit: "mph",
+                    rainUnit: "in",
+                    digitalFontSize: 40,
+                    gaugeScale: 240,
+                    refreshInterval: 15000
+                },
+                {
+                    name: "Hollister",
+                    location: "Hollister, FL",
+                    macAddress: "48:3F:DA:89:B8:B2",
+                    apiKey: "e628b3ba1253449591bc9bf5ebf32bee35017ec8e9b74666b26e50763fd21728",
+                    appKey: "79231481a76f48b1a2f8e642d1e51ab4961283ee51564dbab14b945fdf3e6f37",
+                    tempUnit: "F",
+                    baroUnit: "hpa",
+                    windUnit: "mph",
+                    rainUnit: "in",
+                    digitalFontSize: 40,
+                    gaugeScale: 240,
+                    refreshInterval: 15000
                 }
             ],
-            activeStationIndex: 0,
-            isLiveMode: true,
-            tempUnit: "F",
-            pressUnit: "hPa",
-            windUnit: "mph",
-            rainUnit: "in",
-            refreshInterval: 15000
+            activeStationIndex: 0
         };
 
-        const INTERLACHEN_NWS_URL = "https://api.weather.gov/gridpoints/JAX/51,43/forecast";
-
-        let activeChart = null;
-        let recentHistoryData = [];
-        let forecastDaysData = [];
-        let refreshTimer = null;
-        let rawLastStationData = null;
-
-        function safeSetText(id, val) {
-            const el = document.getElementById(id);
-            if (el) el.innerText = val;
-        }
-
-        function getOutdoorTemp(d) {
-            if (!d) return undefined;
-            const val = d.temp ?? d.tempf ?? d.outdoorTemp ?? d.temp1f;
-            return val !== undefined && val !== null ? Number(val) : undefined;
-        }
-
-        function getFeelsLike(d) {
-            if (!d) return undefined;
-            const val = d.feelsLike ?? d.feelsLikef ?? d.feelslike ?? getOutdoorTemp(d);
-            return val !== undefined && val !== null ? Number(val) : undefined;
-        }
-
-        function getDailyRain(d) {
-            let val = d?.dailyrainin ?? 0;
-            if (val === 0 && recentHistoryData && recentHistoryData.length > 0) {
-                const maxHist = Math.max(...recentHistoryData.map(item => item.dailyrainin ?? 0));
-                if (maxHist > 0) val = maxHist;
-                else {
-                    val = recentHistoryData.reduce((acc, item) => acc + (item.hourlyrainin ?? 0), 0);
-                }
-            }
-            return val;
-        }
-
-        window.onload = function() {
-            loadConfigFromStorage();
-            initClocks();
-            refreshData();
-            setupTimer();
+        window.togglePaneDisplay = function(paneKey) {
+            paneModes[paneKey] = paneModes[paneKey] === 'gauge' ? 'digital' : 'gauge';
+            applyPaneDisplayModes();
         };
 
-        function setupTimer() {
-            if (refreshTimer) clearInterval(refreshTimer);
-            refreshTimer = setInterval(refreshData, parseInt(config.refreshInterval));
-        }
+        function applyPaneDisplayModes() {
+            Object.keys(paneModes).forEach(paneKey => {
+                const mode = paneModes[paneKey];
+                const gaugeEls = document.querySelectorAll(`.gauge-view-${paneKey}`);
+                const digitalEls = document.querySelectorAll(`.digital-view-${paneKey}`);
+                const btnLabel = document.getElementById(`btn-toggle-${paneKey}`);
 
-        function loadConfigFromStorage() {
-            const saved = localStorage.getItem('kd4bee_wx_config');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.stations && Array.isArray(parsed.stations)) {
-                        config = { ...config, ...parsed };
-                    } else if (parsed.apiKey) {
-                        config.stations = [{
-                            name: "KD4BEE WX",
-                            location: "Interlachen, FL",
-                            apiKey: parsed.apiKey,
-                            appKey: parsed.appKey || config.stations[0].appKey
-                        }];
-                        config.isLiveMode = parsed.isLiveMode ?? config.isLiveMode;
-                        config.tempUnit = parsed.tempUnit ?? config.tempUnit;
-                        config.pressUnit = parsed.pressUnit ?? config.pressUnit;
-                        config.windUnit = parsed.windUnit ?? config.windUnit;
-                        config.rainUnit = parsed.rainUnit ?? config.rainUnit;
-                        config.refreshInterval = parsed.refreshInterval ?? config.refreshInterval;
-                    }
-                } catch(e){}
-            }
-        }
-
-        function saveConfigToStorage() {
-            localStorage.setItem('kd4bee_wx_config', JSON.stringify(config));
-        }
-
-        function initClocks() {
-            updateClocks();
-            setInterval(updateClocks, 1000);
-        }
-
-        function updateClocks() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-            const timeParts = timeStr.split(' ');
-            safeSetText('localTimeDisplay', timeParts[0]);
-            safeSetText('localAmPm', timeParts[1] || '');
-
-            const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            safeSetText('localDateDisplay', dateStr);
-
-            const utcStr = now.toLocaleTimeString('en-US', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-            safeSetText('utcTimeDisplay', utcStr + ' UTC');
-        }
-
-        async function refreshData() {
-            const icon = document.getElementById('refreshIcon');
-            if (icon) icon.classList.add('animate-spin-fast');
-
-            const currentStation = config.stations[config.activeStationIndex] || config.stations[0];
-            safeSetText('stationTitleDisplay', currentStation.name);
-            safeSetText('stationLocationDisplay', currentStation.location || "Interlachen, FL");
-
-            try {
-                if (config.isLiveMode) {
-                    await fetchAmbientData();
-                    await fetchInterlachenForecast();
-                    const indicator = document.getElementById('connectionIndicator');
-                    if (indicator) indicator.className = "inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-                    safeSetText('modeLabel', "LIVE");
+                if (mode === 'digital') {
+                    gaugeEls.forEach(el => el.classList.add('hidden'));
+                    digitalEls.forEach(el => el.classList.remove('hidden'));
+                    digitalEls.forEach(el => el.classList.add('flex'));
+                    if (btnLabel) btnLabel.innerText = 'GAUGE';
                 } else {
-                    useDemoData();
-                    const indicator = document.getElementById('connectionIndicator');
-                    if (indicator) indicator.className = "inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-                    safeSetText('modeLabel', "DEMO");
+                    gaugeEls.forEach(el => el.classList.remove('hidden'));
+                    digitalEls.forEach(el => el.classList.add('hidden'));
+                    digitalEls.forEach(el => el.classList.remove('flex'));
+                    if (btnLabel) btnLabel.innerText = 'DIGITAL';
                 }
-            } catch (err) {
-                console.warn("API request failed, fallback to demo mode:", err);
-                useDemoData();
-                safeSetText('modeLabel', "API ERR (DEMO)");
-                const indicator = document.getElementById('connectionIndicator');
-                if (indicator) indicator.className = "inline-block w-2 h-2 rounded-full bg-red-400 animate-pulse";
-            } finally {
-                if (icon) setTimeout(() => icon.classList.remove('animate-spin-fast'), 600);
-            }
+            });
         }
 
-        async function fetchAmbientData() {
-            const currentStation = config.stations[config.activeStationIndex] || config.stations[0];
-            const targetUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${currentStation.appKey}&apiKey=${currentStation.apiKey}&limit=72`;
-            let data = null;
+        function setDigitalFontSize(size) {
+            digitalFontSize = size;
+            document.documentElement.style.setProperty('--digital-font-size', size + 'px');
+        }
 
-            try {
-                const response = await fetch(targetUrl);
-                if (response.ok) data = await response.json();
-            } catch (e) {}
-
-            if (!data) {
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error("HTTP error " + response.status);
-                const wrapper = await response.json();
-                data = JSON.parse(wrapper.contents);
-            }
-
-            if (data && Array.isArray(data) && data.length > 0 && data[0].lastData) {
-                rawLastStationData = data[0].lastData;
-                if (Array.isArray(data[0].history) && data[0].history.length > 0) {
-                    recentHistoryData = data[0].history.slice(0, 72).reverse();
-                } else {
-                    generateSyntheticHistory(rawLastStationData);
+        function setGaugeScale(size) {
+            gaugeScaleSize = size;
+            document.documentElement.style.setProperty('--gauge-scale', size + 'px');
+            
+            // Resize actual canvas drawing buffers to match slider size for crisp rendering
+            ['gauge-wind-speed', 'gauge-wind-dir', 'gauge-temp', 'gauge-out-hum', 'gauge-in-temp', 'gauge-in-hum', 'gauge-baro'].forEach(id => {
+                const cvs = document.getElementById(id);
+                if (cvs) {
+                    cvs.width = size;
+                    cvs.height = size;
                 }
-                updateUI(rawLastStationData);
+            });
+            renderAllGauges();
+        }
+
+        let weatherData = {
+            windSpeed: 8.4,
+            windGust: 12.1,
+            windMax: 18.5,
+            windDeg: 22,
+            windAvgDeg: 18,
+            temp: 72.4,
+            feels: 71.8,
+            dew: 58.2,
+            tempMin: 61.5,
+            tempMax: 78.2,
+            baroInhg: 29.92,
+            baroHpa: 1013.2,
+            rainRate: 0.00,
+            rainEvent: 0.04,
+            rainDaily: 0.04,
+            rainWeekly: 0.42,
+            rainMonthly: 2.18,
+            rainYearly: 14.35,
+            rainLastTimeStr: "3:05 PM", // Locked to your station's reported time
+            dryStreakDays: 0,
+            solar: 485,
+            uv: 3,
+            inTemp: 71.2,
+            inHum: 45,
+            outHum: 62
+        };
+
+        function fToC(f) { return (f - 32) * 5 / 9; }
+        function mphToKmh(m) { return m * 1.60934; }
+        function mphToKts(m) { return m * 0.868976; }
+
+        window.openConfigModal = function() {
+            populateStationDropdown();
+            loadActiveStationIntoForm();
+            const modal = document.getElementById('config-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeConfigModal = function() {
+            const modal = document.getElementById('config-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.setBaroUnit = function(unit) {
+            currentBaroUnit = unit;
+            const btnInhg = document.getElementById('unit-baro-inhg');
+            const btnHpa = document.getElementById('unit-baro-hpa');
+
+            if (unit === 'inhg') {
+                if (btnInhg) btnInhg.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
+                if (btnHpa) btnHpa.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700';
             } else {
-                throw new Error("No station data returned");
+                if (btnHpa) btnHpa.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
+                if (btnInhg) btnInhg.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700';
             }
-        }
+            renderAllGauges();
+        };
 
-        async function fetchInterlachenForecast() {
-            try {
-                const response = await fetch(INTERLACHEN_NWS_URL);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.properties && data.properties.periods) {
-                        parseNWSForecastPeriods(data.properties.periods);
-                        return;
-                    }
-                }
-            } catch(e) {}
-            generateInterlachenFallbackForecast(getOutdoorTemp(rawLastStationData) ?? 78);
-        }
+        window.setTempUnit = function(unit) {
+            currentTempUnit = unit;
+            const btnF = document.getElementById('unit-f');
+            const btnC = document.getElementById('unit-c');
 
-        function parseNWSForecastPeriods(periods) {
-            forecastDaysData = [];
-            for (let i = 0; i < periods.length && forecastDaysData.length < 7; i++) {
-                const p = periods[i];
-                if (p.isDaytime) {
-                    const night = periods[i+1] || p;
-                    forecastDaysData.push({
-                        dayName: forecastDaysData.length === 0 ? 'Today' : p.name.substring(0, 3),
-                        fullDayName: p.name,
-                        high: p.temperature,
-                        low: night.temperature,
-                        shortForecast: p.shortForecast,
-                        detailedForecast: p.detailedForecast,
-                        icon: getNwsIconClass(p.shortForecast),
-                        windSpeed: p.windSpeed,
-                        windDirection: p.windDirection,
-                        precipChance: p.probabilityOfPrecipitation ? (p.probabilityOfPrecipitation.value || 0) : 0
-                    });
-                }
+            if (unit === 'F') {
+                if (btnF) btnF.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
+                if (btnC) btnC.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700';
+            } else {
+                if (btnC) btnC.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
+                if (btnF) btnF.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700';
             }
-            renderForecastGrid();
-        }
+            renderAllGauges();
+        };
 
-        function generateInterlachenFallbackForecast(baseTemp) {
-            forecastDaysData = [];
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const todayIdx = new Date().getDay();
+        window.toggleUnits = function() {
+            window.setTempUnit(currentTempUnit === 'F' ? 'C' : 'F');
+        };
 
-            for (let i = 0; i < 7; i++) {
-                const dayName = i === 0 ? 'Today' : days[(todayIdx + i) % 7];
-                const high = Math.round(baseTemp + Math.sin(i) * 4 + 2);
-                const low = Math.round(high - 14 - Math.cos(i) * 2);
+        window.setWindUnit = function(unit) {
+            currentWindUnit = unit;
+            const btnMph = document.getElementById('unit-wind-mph');
+            const btnKmh = document.getElementById('unit-wind-kmh');
+            const btnKts = document.getElementById('unit-wind-kts');
 
-                forecastDaysData.push({
-                    dayName: dayName,
-                    fullDayName: dayName === 'Today' ? 'Today' : `${dayName} Forecast`,
-                    high: high,
-                    low: low,
-                    shortForecast: i % 3 === 0 ? 'Scattered Thunderstorms' : (i % 2 === 0 ? 'Partly Cloudy' : 'Sunny & Warm'),
-                    detailedForecast: `Forecast: High near ${high}°F with low around ${low}°F. Winds light at 5 to 10 mph.`,
-                    icon: i % 3 === 0 ? 'fa-cloud-bolt' : (i % 2 === 0 ? 'fa-cloud-sun' : 'fa-sun'),
-                    windSpeed: '5 to 10 mph',
-                    windDirection: 'E',
-                    precipChance: i % 3 === 0 ? 60 : 10
-                });
-            }
-            renderForecastGrid();
-        }
-
-        function renderForecastGrid() {
-            const grid = document.getElementById('forecastGrid');
-            if (!grid) return;
-            grid.innerHTML = "";
-
-            forecastDaysData.forEach((day, index) => {
-                const col = document.createElement('div');
-                col.className = "flex flex-col items-center bg-slate-800/40 p-1.5 rounded-xl border border-slate-700/50 hover:border-sky-400/50 cursor-pointer transition";
-                col.onclick = () => openForecastDayModal(index);
-                
-                const highConv = formatTemp(day.high);
-                const lowConv = formatTemp(day.low);
-
-                col.innerHTML = `
-                    <span class="text-[9px] font-bold text-slate-300">${day.dayName}</span>
-                    <i class="fa-solid ${day.icon} text-sky-400 text-xs my-1"></i>
-                    <span class="text-[10px] font-black text-white">${highConv.val}°</span>
-                    <span class="text-[8px] font-medium text-slate-400">${lowConv.val}°</span>
-                `;
-                grid.appendChild(col);
+            [btnMph, btnKmh, btnKts].forEach(btn => {
+                if (btn) btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700';
             });
+
+            if (unit === 'mph' && btnMph) btnMph.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
+            if (unit === 'kmh' && btnKmh) btnKmh.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
+            if (unit === 'kts' && btnKts) btnKts.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
+
+            const lblUnit = document.getElementById('lbl-wind-unit');
+            if (lblUnit) lblUnit.innerText = unit.toUpperCase();
+
+            renderAllGauges();
+        };
+
+        window.cycleWindUnit = function() {
+            if (currentWindUnit === 'mph') window.setWindUnit('kmh');
+            else if (currentWindUnit === 'kmh') window.setWindUnit('kts');
+            else window.setWindUnit('mph');
+        };
+
+        window.setRainViewMode = function(mode) {
+            activeRainMode = mode;
+            renderRainView();
+        };
+
+        function getRainIntensityInfo(rate) {
+            if (rate <= 0) return { label: 'NO RAIN', color: 'text-slate-400', bg: 'bg-slate-800', barColor: 'bg-slate-700', pct: 0 };
+            if (rate < 0.1) return { label: 'LIGHT DRIZZLE', color: 'text-cyan-300', bg: 'bg-cyan-950', barColor: 'bg-cyan-400', pct: 25 };
+            if (rate < 0.3) return { label: 'MODERATE RAIN', color: 'text-emerald-400', bg: 'bg-emerald-950', barColor: 'bg-emerald-400', pct: 50 };
+            if (rate < 0.5) return { label: 'HEAVY RAIN', color: 'text-amber-400', bg: 'bg-amber-950', barColor: 'bg-amber-400', pct: 75 };
+            return { label: 'TORRENTIAL DOWNPOUR', color: 'text-rose-400', bg: 'bg-rose-950', barColor: 'bg-rose-500', pct: 100 };
         }
 
-        function getNwsIconClass(forecast) {
-            const f = forecast.toLowerCase();
-            if (f.includes('thunder') || f.includes('storm')) return 'fa-cloud-bolt';
-            if (f.includes('rain') || f.includes('shower')) return 'fa-cloud-showers-heavy';
-            if (f.includes('cloud') || f.includes('overcast')) return 'fa-cloud-sun';
-            return 'fa-sun';
-        }
+        function renderRainView() {
+            const container = document.getElementById('rain-view-container');
+            if (!container) return;
 
-        function openForecastDayModal(index) {
-            const day = forecastDaysData[index];
-            if (!day) return;
+            const rMult = currentRainUnit === 'mm' ? 25.4 : 1;
+            const rUnitStr = currentRainUnit === 'mm' ? 'mm' : 'in';
 
-            const modal = document.getElementById('historyModal');
-            if (modal) modal.classList.remove('hidden');
+            if (activeRainMode === 'liquid') {
+                const dailyVal = (weatherData.rainDaily * rMult);
+                const maxCap = currentRainUnit === 'mm' ? 25 : 1.0;
+                const fillPct = Math.min(100, Math.max(8, (dailyVal / maxCap) * 100));
+                const intensity = getRainIntensityInfo(weatherData.rainRate);
 
-            safeSetText('modalTitle', day.fullDayName);
-            safeSetText('modalSubTitle', "NWS Forecast");
-
-            const highConv = formatTemp(day.high);
-            const lowConv = formatTemp(day.low);
-
-            safeSetText('statLabel1', "Expected High");
-            safeSetText('statHigh', `${highConv.val}°${highConv.unit}`);
-            safeSetText('statLabel2', "Expected Low");
-            safeSetText('statLow', `${lowConv.val}°${lowConv.unit}`);
-            safeSetText('statLabel3', "Precip Chance");
-            safeSetText('statAvg', `${day.precipChance}%`);
-
-            const chartWrapper = document.getElementById('chartWrapper');
-            if (chartWrapper) chartWrapper.classList.add('hidden');
-            const readingsGroup = document.getElementById('recentReadingsGroup');
-            if (readingsGroup) readingsGroup.classList.add('hidden');
-            
-            const detailTextEl = document.getElementById('forecastDetailText');
-            if (detailTextEl) {
-                detailTextEl.classList.remove('hidden');
-                detailTextEl.innerHTML = `
-                    <div class="font-bold text-sky-300 mb-1 flex items-center justify-between">
-                        <span>${day.shortForecast}</span>
-                        <span class="text-[10px] text-slate-400">Wind: ${day.windDirection} ${day.windSpeed}</span>
+                container.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="relative w-10 h-28 bg-slate-900 border-2 border-slate-700 rounded-lg overflow-hidden flex flex-col justify-end p-0.5 shadow-inner">
+                            <div class="w-full ${intensity.barColor} transition-all duration-700 rounded-b" style="height: ${fillPct}%"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"></div>
+                        </div>
+                        <div class="flex-grow space-y-1.5">
+                            <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                                <div class="text-[11px] text-slate-300 font-bold uppercase">DAILY ACCUMULATION</div>
+                                <div class="text-lg font-bold text-cyan-300">${dailyVal.toFixed(2)} ${rUnitStr}</div>
+                            </div>
+                            <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800 flex justify-between items-center">
+                                <div>
+                                    <div class="text-[10px] text-slate-400 font-bold uppercase">EVENT TOTAL</div>
+                                    <div class="text-xs font-bold text-slate-200">${(weatherData.rainEvent * rMult).toFixed(2)} ${rUnitStr}</div>
+                                </div>
+                                <span class="text-[10px] font-bold ${intensity.color} ${intensity.bg} border border-slate-700 px-2 py-0.5 rounded">${intensity.label}</span>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 leading-snug">${day.detailedForecast}</p>
+                `;
+            } else if (activeRainMode === 'rate') {
+                const rateVal = (weatherData.rainRate * rMult);
+                const intensity = getRainIntensityInfo(weatherData.rainRate);
+
+                container.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center">
+                            <div>
+                                <div class="text-[11px] text-slate-300 font-bold uppercase">HOURLY RAIN RATE</div>
+                                <div class="text-xl font-bold text-cyan-400">${rateVal.toFixed(2)} ${rUnitStr}/hr</div>
+                            </div>
+                            <span class="text-xs font-bold ${intensity.color} ${intensity.bg} border border-slate-700 px-2.5 py-1 rounded shadow-md">${intensity.label}</span>
+                        </div>
+                        <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                            <div class="flex justify-between text-[10px] text-slate-300 font-bold mb-1">
+                                <span>PRECIPITATION INTENSITY</span>
+                                <span>${intensity.pct}%</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div class="${intensity.barColor} h-full transition-all duration-500" style="width: ${intensity.pct}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (activeRainMode === 'extended') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-3 gap-1.5 text-center">
+                        <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                            <div class="text-[10px] text-slate-400 font-bold">HOURLY RATE</div>
+                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainRate * rMult).toFixed(2)} ${rUnitStr}</div>
+                        </div>
+                        <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                            <div class="text-[10px] text-slate-400 font-bold">EVENT</div>
+                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainEvent * rMult).toFixed(2)} ${rUnitStr}</div>
+                        </div>
+                        <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                            <div class="text-[10px] text-slate-400 font-bold">DAILY</div>
+                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainDaily * rMult).toFixed(2)} ${rUnitStr}</div>
+                        </div>
+                        <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                            <div class="text-[10px] text-slate-400 font-bold">WEEKLY</div>
+                            <div class="text-xs font-bold text-slate-200">${(weatherData.rainWeekly * rMult).toFixed(2)} ${rUnitStr}</div>
+                        </div>
+                        <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                            <div class="text-[10px] text-slate-400 font-bold">MONTHLY</div>
+                            <div class="text-xs font-bold text-slate-200">${(weatherData.rainMonthly * rMult).toFixed(2)} ${rUnitStr}</div>
+                        </div>
+                        <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                            <div class="text-[10px] text-slate-400 font-bold">YEARLY</div>
+                            <div class="text-xs font-bold text-emerald-400">${(weatherData.rainYearly * rMult).toFixed(2)} ${rUnitStr}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (activeRainMode === 'chart') {
+                container.innerHTML = `
+                    <div class="h-28 w-full relative">
+                        <canvas id="chart-rain-mini"></canvas>
+                    </div>
+                `;
+                setTimeout(initRainMiniChart, 50);
+            } else if (activeRainMode === 'tracker') {
+                const isRaining = weatherData.rainRate > 0;
+                let computedDryStreakDays = weatherData.dryStreakDays;
+                if (isRaining || weatherData.rainDaily > 0) {
+                    computedDryStreakDays = 0;
+                }
+
+                // Determine display string for last rain event
+                let lastRainDisplay = weatherData.rainLastTimeStr || '3:05 PM';
+                if (isRaining) {
+                    lastRainDisplay = 'NOW';
+                } else if (weatherData.rainDaily > 0 && lastRainDisplay === '3:05 PM') {
+                    // If rain recorded today, ensure readout indicates today's activity
+                    lastRainDisplay = `Today ${lastRainDisplay}`;
+                }
+
+                container.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="led-indicator ${isRaining ? 'led-red animate-ping' : (weatherData.rainDaily > 0 ? 'led-yellow' : 'led-off')}"></span>
+                                <span class="text-xs font-bold text-slate-200">${isRaining ? 'ACTIVE RAIN DETECTED' : (weatherData.rainDaily > 0 ? 'RAIN RECORDED TODAY' : 'NO ACTIVE PRECIPITATION')}</span>
+                            </div>
+                            <span class="text-[10px] bg-slate-800 text-cyan-300 px-2 py-0.5 rounded border border-slate-700">Storm Guard</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-center">
+                            <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                                <div class="text-[10px] text-slate-400 font-bold uppercase">LAST RAIN EVENT</div>
+                                <div class="text-sm font-bold text-amber-300">${lastRainDisplay}</div>
+                            </div>
+                            <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                                <div class="text-[10px] text-slate-400 font-bold uppercase">DRY STREAK</div>
+                                <div class="text-sm font-bold text-emerald-400">${computedDryStreakDays} Days Dry</div>
+                            </div>
+                        </div>
+                    </div>
                 `;
             }
         }
 
-        function useDemoData() {
-            rawLastStationData = {
-                temp: 78.2,
-                tempf: 78.2,
-                tempmax: 84.5,
-                tempmin: 68.1,
-                feelsLike: 80.1,
-                tempinf: 72.5,
-                humidityin: 48,
-                windspeedmph: 6.4,
-                windgustmph: 10.2,
-                maxdailygust: 18.4,
-                winddir: 135,
-                humidity: 62,
-                dewPoint: 64.0,
-                baromrelin: 29.92,
-                hourlyrainin: 0.05,
-                dailyrainin: 1.25,
-                solarradiation: 542.8,
-                uv: 6
-            };
-
-            generateSyntheticHistory(rawLastStationData);
-            updateUI(rawLastStationData);
-            generateInterlachenFallbackForecast(78.2);
-        }
-
-        function generateSyntheticHistory(base) {
-            recentHistoryData = [];
-            const now = Date.now();
-            const baseOutdoor = getOutdoorTemp(base) ?? 78.2;
-
-            for (let i = 72; i >= 0; i--) {
-                const time = new Date(now - i * 10 * 60 * 1000).toISOString();
-                const hoursAgo = (i * 10) / 60;
-                const tempOffset = Math.sin(hoursAgo / 3) * 6;
-                const calcTemp = Number((baseOutdoor + tempOffset).toFixed(1));
-
-                recentHistoryData.push({
-                    date: time,
-                    temp: calcTemp,
-                    tempf: calcTemp,
-                    feelsLike: Number((calcTemp + 1.5).toFixed(1)),
-                    tempinf: Number(((base.tempinf ?? 72) + tempOffset * 0.3).toFixed(1)),
-                    humidityin: Math.min(100, Math.max(20, Math.round((base.humidityin ?? 48) + Math.sin(hoursAgo / 2) * 4))),
-                    windspeedmph: Math.max(0, Number(((base.windspeedmph ?? 6) + Math.cos(hoursAgo) * 3).toFixed(1))),
-                    windgustmph: Math.max(0, Number(((base.windgustmph ?? 10) + Math.cos(hoursAgo) * 4).toFixed(1))),
-                    humidity: Math.min(100, Math.max(20, Math.round((base.humidity ?? 60) - tempOffset * 2))),
-                    baromrelin: Number(((base.baromrelin ?? 29.92) + Math.sin(hoursAgo/4) * 0.1).toFixed(2)),
-                    dailyrainin: base.dailyrainin ?? 1.25,
-                    hourlyrainin: (Math.sin(hoursAgo) > 0.5) ? 0.05 : 0.00,
-                    solarradiation: Math.max(0, Number(((base.solarradiation ?? 500) + Math.sin(hoursAgo/2) * 300).toFixed(1))),
-                    uv: Math.max(0, Math.round((base.uv ?? 5) + Math.sin(hoursAgo/2) * 3))
-                });
-            }
-        }
-
-        function formatTemp(f) {
-            if (f === undefined || f === null) return { val: '--', unit: config.tempUnit };
-            if (config.tempUnit === 'C') {
-                return { val: ((f - 32) * 5 / 9).toFixed(1), unit: 'C' };
-            }
-            return { val: Number(f).toFixed(1), unit: 'F' };
-        }
-
-        function formatPressure(inHg) {
-            if (!inHg) return { val: '--', unit: config.pressUnit };
-            if (config.pressUnit === 'hPa') return { val: (inHg * 33.8639).toFixed(1), unit: 'hPa' };
-            if (config.pressUnit === 'mmHg') return { val: (inHg * 25.4).toFixed(1), unit: 'mmHg' };
-            return { val: Number(inHg).toFixed(2), unit: 'inHg' };
-        }
-
-        function formatWind(mph) {
-            if (mph === undefined || mph === null) return { val: '--', unit: config.windUnit };
-            if (config.windUnit === 'kmh') return { val: (mph * 1.60934).toFixed(1), unit: 'km/h' };
-            if (config.windUnit === 'kt') return { val: (mph * 0.868976).toFixed(1), unit: 'kt' };
-            if (config.windUnit === 'ms') return { val: (mph * 0.44704).toFixed(1), unit: 'm/s' };
-            return { val: Number(mph).toFixed(1), unit: 'mph' };
-        }
-
-        function formatRain(inches) {
-            if (inches === undefined || inches === null) return { val: '0.00', unit: config.rainUnit };
-            if (config.rainUnit === 'mm') return { val: (inches * 25.4).toFixed(1), unit: 'mm' };
-            return { val: Number(inches).toFixed(2), unit: 'in' };
-        }
-
-        function updateUI(d) {
-            const temp = formatTemp(getOutdoorTemp(d));
-            const feels = formatTemp(getFeelsLike(d));
-            const inTemp = formatTemp(d.tempinf);
-
-            safeSetText('tempDisplay', temp.val);
-            safeSetText('tempUnitLabel', '°' + temp.unit);
-            safeSetText('feelsLikeDisplay', `${feels.val}°${feels.unit}`);
-            
-            safeSetText('indoorTempDisplay', inTemp.val);
-            safeSetText('indoorTempUnit', '°' + inTemp.unit);
-            safeSetText('indoorHumidityDisplay', d.humidityin !== undefined ? d.humidityin : '--');
-
-            const wind = formatWind(d.windspeedmph);
-            const gust = formatWind(d.windgustmph);
-            safeSetText('windSpeedDisplay', wind.val);
-            safeSetText('windUnitLabel', wind.unit);
-            safeSetText('windGustDisplay', gust.val);
-            safeSetText('windGustUnit', gust.unit);
-
-            safeSetText('humidityDisplay', d.humidity !== undefined ? d.humidity : '--');
-            const dew = formatTemp(d.dewPoint);
-            safeSetText('dewPointDisplay', `${dew.val}°${dew.unit}`);
-
-            const solar = d.solarradiation !== undefined && d.solarradiation !== null ? Number(d.solarradiation).toFixed(1) : '--';
-            const uv = d.uv !== undefined && d.uv !== null ? d.uv : '--';
-            safeSetText('solarDisplay', solar);
-            safeSetText('uvDisplay', uv);
-
-            const press = formatPressure(d.baromrelin || d.baromabsin || 29.92);
-            safeSetText('pressureDisplay', press.val);
-            safeSetText('pressureUnitLabel', press.unit);
-
-            const rainHr = formatRain(d.hourlyrainin);
-            const rainDayVal = getDailyRain(d);
-            const rainDay = formatRain(rainDayVal);
-
-            safeSetText('rainHourlyDisplay', rainHr.val);
-            safeSetText('rainUnitLabel', `${rainHr.unit}/h`);
-            safeSetText('rainDayDisplay', `${rainDay.val} ${rainDay.unit}`);
-
-            const windDir = d.winddir || 0;
-            safeSetText('windDirText', getWindDirectionString(windDir));
-            
-            const windDirIcon = document.getElementById('windDirectionIcon');
-            if (windDirIcon) windDirIcon.style.transform = `rotate(${windDir - 45}deg)`;
-            
-            const windSpeedArrow = document.getElementById('windSpeedArrowIcon');
-            if (windSpeedArrow) windSpeedArrow.style.transform = `rotate(${windDir - 45}deg)`;
-
-            const syncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            safeSetText('lastUpdatedDisplay', 'Synced ' + syncTime);
-        }
-
-        function getWindDirectionString(degrees) {
-            const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-            return directions[Math.floor((degrees / 22.5) + 0.5) % 16];
-        }
-
-        function openHistoryModal(type) {
-            const modal = document.getElementById('historyModal');
-            if (modal) modal.classList.remove('hidden');
-
-            const chartWrapper = document.getElementById('chartWrapper');
-            if (chartWrapper) chartWrapper.classList.remove('hidden');
-            const readingsGroup = document.getElementById('recentReadingsGroup');
-            if (readingsGroup) readingsGroup.classList.remove('hidden');
-            const detailTextEl = document.getElementById('forecastDetailText');
-            if (detailTextEl) detailTextEl.classList.add('hidden');
-
-            let title = "";
-            let unit = "";
-            let color = "#38bdf8";
-
-            safeSetText('statLabel1', "High / Max");
-            safeSetText('statLabel2', "Low / Min");
-            safeSetText('statLabel3', "Average");
-
-            switch(type) {
-                case 'outdoor_temp':
-                    title = "Outdoor Temp History";
-                    unit = "°" + config.tempUnit;
-                    color = "#38bdf8";
-                    break;
-                case 'outdoor_humidity':
-                    title = "Outdoor Humidity History";
-                    unit = "%";
-                    color = "#38bdf8";
-                    break;
-                case 'indoor_temp':
-                    title = "Indoor Temp History";
-                    unit = "°" + config.tempUnit;
-                    color = "#f97316";
-                    break;
-                case 'indoor_humidity':
-                    title = "Indoor Humidity History";
-                    unit = "%";
-                    color = "#14b8a6";
-                    break;
-                case 'wind':
-                    title = "Wind Speed & Gust History";
-                    unit = " " + config.windUnit;
-                    color = "#0ea5e9";
-                    break;
-                case 'solar':
-                    title = "Solar Radiation History";
-                    unit = " W/m²";
-                    color = "#f59e0b";
-                    break;
-                case 'pressure':
-                    title = `Pressure (${config.pressUnit})`;
-                    unit = " " + config.pressUnit;
-                    color = "#a855f7";
-                    break;
-                case 'rain':
-                    title = "12-Hour Rainfall Breakdown";
-                    unit = " " + config.rainUnit;
-                    color = "#6366f1";
-                    safeSetText('statLabel1', "Total Today");
-                    safeSetText('statLabel2', "12h Peak Rate");
-                    safeSetText('statLabel3', "12h Avg Rate");
-                    break;
-            }
-
-            safeSetText('modalTitle', title);
-            safeSetText('modalSubTitle', type === 'rain' ? "Past 12-Hour Hourly Rain & 10-Min Logs" : "12-Hour 10-Minute Trends & Station Extrema");
-            safeSetText('readingsLogTitle', type === 'rain' ? "12-Hour Rainfall Log" : "Readings Log (12 Hours)");
-
-            const labels = [];
-            const values = [];
-
-            const slicedHistory = recentHistoryData.slice(-72);
-
-            slicedHistory.forEach(item => {
-                const time = item.date ? new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--';
-                labels.push(time);
-
-                let val;
-                if (type === 'outdoor_temp') val = Number(formatTemp(getOutdoorTemp(item)).val);
-                else if (type === 'outdoor_humidity') val = item.humidity !== undefined ? Number(item.humidity) : 0;
-                else if (type === 'indoor_temp') val = Number(formatTemp(item.tempinf).val);
-                else if (type === 'indoor_humidity') val = item.humidityin !== undefined ? Number(item.humidityin) : 0;
-                else if (type === 'wind') val = Number(formatWind(item.windgustmph ?? item.windspeedmph).val);
-                else if (type === 'solar') val = item.solarradiation !== undefined ? item.solarradiation : 0;
-                else if (type === 'pressure') val = Number(formatPressure(item.baromrelin).val);
-                else if (type === 'rain') val = Number(formatRain(item.hourlyrainin ?? item.dailyrainin).val);
-
-                values.push(isNaN(val) ? 0 : val);
-            });
-
-            if (values.length > 0) {
-                let highVal, lowVal;
-
-                if (type === 'rain') {
-                    let totalTodayInches = getDailyRain(rawLastStationData);
-                    const convTotal = formatRain(totalTodayInches);
-                    highVal = `${convTotal.val}`;
-                    lowVal = `${Math.max(...values).toFixed(2)}`;
-                    const avgVal = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
-
-                    safeSetText('statHigh', highVal + " " + convTotal.unit);
-                    safeSetText('statLow', lowVal + unit);
-                    safeSetText('statAvg', avgVal + unit);
-                } else {
-                    const avgValGen = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
-                    if (rawLastStationData) {
-                        if (type === 'outdoor_temp') {
-                            highVal = rawLastStationData.tempmax !== undefined ? formatTemp(rawLastStationData.tempmax).val : Math.max(...values);
-                            lowVal = rawLastStationData.tempmin !== undefined ? formatTemp(rawLastStationData.tempmin).val : Math.min(...values);
-                        } else if (type === 'wind') {
-                            highVal = rawLastStationData.maxdailygust !== undefined ? formatWind(rawLastStationData.maxdailygust).val : Math.max(...values);
-                            lowVal = Math.min(...values);
-                        } else {
-                            highVal = Math.max(...values);
-                            lowVal = Math.min(...values);
-                        }
-                    } else {
-                        highVal = Math.max(...values);
-                        lowVal = Math.min(...values);
-                    }
-                    safeSetText('statHigh', highVal + unit);
-                    safeSetText('statLow', lowVal + unit);
-                    safeSetText('statAvg', avgValGen + unit);
-                }
-            }
-
-            const listEl = document.getElementById('modalDataList');
-            if (listEl) {
-                listEl.innerHTML = "";
-                for (let i = values.length - 1; i >= 0; i--) {
-                    const row = document.createElement('div');
-                    row.className = "flex justify-between items-center bg-slate-800/40 px-2 py-1 rounded border border-slate-700/50";
-                    row.innerHTML = `<span class="text-slate-400 font-mono">${labels[i]}</span> <span class="font-bold text-white">${values[i]}${unit}</span>`;
-                    listEl.appendChild(row);
-                }
-            }
-
-            renderChart(labels, values, title, unit, color, type);
-        }
-
-        function renderChart(labels, values, label, unit, color, type) {
-            const canvas = document.getElementById('historyChart');
+        function initRainMiniChart() {
+            const canvas = document.getElementById('chart-rain-mini');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            if (activeChart) activeChart.destroy();
+            const rMult = currentRainUnit === 'mm' ? 25.4 : 1;
 
-            const beginZero = (type === 'rain' || type === 'solar' || type === 'outdoor_humidity' || type === 'indoor_humidity' || type === 'wind');
+            // Generate past 7 days dates with Month & Day number (e.g. "Oct 27", "Nov 2")
+            const dateLabels = [];
+            const dailyData = weatherData.weeklyHistory || [0, 0, 0, 0, 0, 0, weatherData.rainDaily];
 
-            activeChart = new Chart(ctx, {
-                type: 'line',
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const monthStr = d.toLocaleDateString('en-US', { month: 'short' });
+                const dayNum = d.getDate();
+                dateLabels.push(`${monthStr} ${dayNum}`);
+            }
+
+            // Convert to display units
+            const chartData = dailyData.map(val => Number((val * rMult).toFixed(2)));
+
+            if (rainBarChart) rainBarChart.destroy();
+            rainBarChart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: labels,
+                    labels: dateLabels,
                     datasets: [{
-                        label: label,
-                        data: values,
-                        borderColor: color,
-                        backgroundColor: color + '22',
-                        fill: true,
-                        tension: 0.35,
-                        borderWidth: 2,
-                        pointRadius: 1
+                        label: 'Rain (' + (currentRainUnit.toUpperCase()) + ')',
+                        data: chartData,
+                        backgroundColor: chartData.map((v, i) => i === 6 ? '#00ff66' : '#00f0ff'),
+                        borderRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
                     scales: {
-                        x: { 
-                            ticks: { 
-                                color: '#94a3b8', 
-                                font: { size: 9 },
-                                maxTicksLimit: 6
-                            }, 
-                            grid: { display: false } 
+                        x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 9, weight: 'bold' } } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#00f0ff', font: { size: 9, weight: 'bold' } }, beginAtZero: true }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        window.setRainUnit = function(unit) {
+            currentRainUnit = unit;
+            const btnIn = document.getElementById('unit-rain-in');
+            const btnMm = document.getElementById('unit-rain-mm');
+
+            if (unit === 'in') {
+                if (btnIn) btnIn.className = 'px-1.5 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer';
+                if (btnMm) btnMm.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer';
+            } else {
+                if (btnMm) btnMm.className = 'px-1.5 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer';
+                if (btnIn) btnIn.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer';
+            }
+            renderAllGauges();
+        };
+
+        function degToCardinal(deg) {
+            const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+            return directions[Math.round(deg / 22.5) % 16];
+        }
+
+        function getUvIndexCategory(uv) {
+            if (uv <= 2) return 'LOW';
+            if (uv <= 5) return 'MODERATE';
+            if (uv <= 7) return 'HIGH';
+            if (uv <= 10) return 'VERY HIGH';
+            return 'EXTREME';
+        }
+
+        async function syncTimeWithAkamai() {
+            const startPing = performance.now();
+            try {
+                const response = await fetch('https://images.apple.com/favicon.ico?' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+                const endPing = performance.now();
+                const latency = Math.round(endPing - startPing);
+
+                const dateHeader = response.headers.get('Date');
+                if (dateHeader) {
+                    const akamaiTime = new Date(dateHeader).getTime();
+                    const localDeviceTime = Date.now();
+                    timeOffsetMs = akamaiTime - localDeviceTime;
+
+                    const latencyBadge = document.getElementById('sync-latency-badge');
+                    const sourceBadge = document.getElementById('sync-source-badge');
+                    if (latencyBadge) latencyBadge.innerText = `Lat: ${latency}ms`;
+                    if (sourceBadge) sourceBadge.innerText = 'Akamai CDN';
+                }
+            } catch (err) {
+                timeOffsetMs = 0;
+                const latencyBadge = document.getElementById('sync-latency-badge');
+                const sourceBadge = document.getElementById('sync-source-badge');
+                if (latencyBadge) latencyBadge.innerText = 'Lat: Local';
+                if (sourceBadge) sourceBadge.innerText = 'System Clock';
+            }
+        }
+
+        function initClocks() {
+            function updateClocks() {
+                const correctedTime = new Date(Date.now() + timeOffsetMs);
+                const clockLocal = document.getElementById('clock-local');
+                const clockUtc = document.getElementById('clock-utc');
+                if (clockLocal) clockLocal.innerText = correctedTime.toLocaleTimeString();
+                if (clockUtc) clockUtc.innerText = correctedTime.toISOString().slice(11, 19) + ' UTC';
+            }
+            updateClocks();
+            setInterval(updateClocks, 1000);
+
+            syncTimeWithAkamai();
+            setInterval(syncTimeWithAkamai, 300000);
+        }
+
+        function getSkinColors() {
+            return {
+                bezelGrad1: '#3b4f7a', bezelGrad2: '#0f172a',
+                faceBg: '#0f1522', faceBorder: '#2a3854',
+                tickColor: '#64748b', textColor: '#94a3b8',
+                digitalColor: '#00f0ff', pinColor: '#e2e8f0'
+            };
+        }
+
+        function drawGaugeDial(canvasId, value, min, max, title, unit, colorZones, options = {}) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const radius = w / 2 - 14;
+            const skin = getSkinColors();
+
+            ctx.clearRect(0, 0, w, h);
+
+            const gradBezel = ctx.createLinearGradient(0, 0, w, h);
+            gradBezel.addColorStop(0, skin.bezelGrad1);
+            gradBezel.addColorStop(1, skin.bezelGrad2);
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius + 8, 0, Math.PI * 2);
+            ctx.fillStyle = gradBezel;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = skin.faceBg;
+            ctx.fill();
+            ctx.strokeStyle = skin.faceBorder;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            const startAngle = Math.PI * 0.75;
+            const totalAngle = Math.PI * 1.5;
+
+            if (colorZones) {
+                colorZones.forEach(zone => {
+                    const zStart = startAngle + ((zone.from - min) / (max - min)) * totalAngle;
+                    const zEnd = startAngle + ((zone.to - min) / (max - min)) * totalAngle;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius - 6, zStart, zEnd);
+                    ctx.strokeStyle = zone.color;
+                    ctx.lineWidth = options.arcWidth || 5;
+                    ctx.stroke();
+                });
+            }
+
+            // Scale tick number font size proportionally with canvas width
+            const tickFontSize = Math.max(9, Math.round(w * 0.046));
+            ctx.fillStyle = skin.textColor;
+            ctx.font = `bold ${tickFontSize}px Arial, Helvetica, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const tickCount = options.tickCount || 6;
+            for (let i = 0; i <= tickCount; i++) {
+                const tickVal = min + (i * (max - min) / tickCount);
+                const angle = startAngle + (i / tickCount) * totalAngle;
+                
+                const innerR = radius - 11;
+                const outerR = radius - 4;
+                const x1 = cx + Math.cos(angle) * innerR;
+                const y1 = cy + Math.sin(angle) * innerR;
+                const x2 = cx + Math.cos(angle) * outerR;
+                const y2 = cy + Math.sin(angle) * outerR;
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = skin.tickColor;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                if (!options.hideTickNumbers && (i % 2 === 0 || tickCount <= 5)) {
+                    const textR = radius - Math.max(16, Math.round(w * 0.085));
+                    const tx = cx + Math.cos(angle) * textR;
+                    const ty = cy + Math.sin(angle) * textR;
+                    const displayTick = options.decimals ? tickVal.toFixed(options.decimals) : Math.round(tickVal);
+                    ctx.fillText(displayTick, tx, ty);
+                }
+            }
+
+            const clampedVal = Math.min(Math.max(value, min), max);
+            const valAngle = startAngle + ((clampedVal - min) / (max - min)) * totalAngle;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(valAngle + Math.PI / 2);
+            ctx.beginPath();
+            ctx.moveTo(-3, 0);
+            ctx.lineTo(0, -radius + 16);
+            ctx.lineTo(3, 0);
+            ctx.fillStyle = options.needleColor || '#00f0ff';
+            ctx.fill();
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fillStyle = skin.pinColor;
+            ctx.fill();
+            ctx.strokeStyle = skin.faceBorder;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Updated from 10% to 12% of canvas width to match other gauges
+            const dialValueFontSize = Math.max(16, Math.round(w * 0.12));
+            ctx.fillStyle = skin.digitalColor;
+            ctx.font = `bold ${dialValueFontSize}px Arial, Helvetica, sans-serif`;
+            const valDecs = options.valDecimals !== undefined ? options.valDecimals : 1;
+            const yOffset = options.digitalYOffset !== undefined ? options.digitalYOffset : 0.30;
+            ctx.fillText(value.toFixed(valDecs) + (unit ? ' ' + unit : ''), cx, cy + radius * yOffset);
+        }
+
+        function drawCompassDial(canvasId, degrees, avgDegrees) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const radius = w / 2 - 14;
+            const skin = getSkinColors();
+
+            ctx.clearRect(0, 0, w, h);
+
+            const gradBezel = ctx.createLinearGradient(0, 0, w, h);
+            gradBezel.addColorStop(0, skin.bezelGrad1);
+            gradBezel.addColorStop(1, skin.bezelGrad2);
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius + 8, 0, Math.PI * 2);
+            ctx.fillStyle = gradBezel;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = skin.faceBg;
+            ctx.fill();
+            ctx.strokeStyle = skin.faceBorder;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            const tickFontSize = Math.max(8, Math.round(w * 0.04));
+            ctx.font = `bold ${tickFontSize}px Arial, Helvetica, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for (let d = 0; d < 360; d += 30) {
+                const rad = (d - 90) * (Math.PI / 180);
+                const innerR = radius - 10;
+                const outerR = radius - 5;
+                const x1 = cx + Math.cos(rad) * innerR;
+                const y1 = cy + Math.sin(rad) * innerR;
+                const x2 = cx + Math.cos(rad) * outerR;
+                const y2 = cy + Math.sin(rad) * outerR;
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = skin.tickColor;
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                if (d % 90 === 0) {
+                    const textR = radius - Math.max(16, Math.round(w * 0.085));
+                    const tx = cx + Math.cos(rad) * textR;
+                    const ty = cy + Math.sin(rad) * textR;
+                    ctx.fillStyle = skin.textColor;
+                    ctx.fillText(d + '°', tx, ty);
+                }
+            }
+
+            const cardinals = [
+                { label: 'N', deg: 0, color: '#ff3355' },
+                { label: 'E', deg: 90, color: skin.textColor },
+                { label: 'S', deg: 180, color: skin.textColor },
+                { label: 'W', deg: 270, color: skin.textColor }
+            ];
+
+            const cardFontSize = Math.max(11, Math.round(w * 0.055));
+            ctx.font = `bold ${cardFontSize}px Arial, Helvetica, sans-serif`;
+            cardinals.forEach(pt => {
+                const rad = (pt.deg - 90) * (Math.PI / 180);
+                const tx = cx + Math.cos(rad) * (radius - 8);
+                const ty = cy + Math.sin(rad) * (radius - 8);
+                ctx.fillStyle = pt.color;
+                ctx.fillText(pt.label, tx, ty);
+            });
+
+            if (avgDegrees !== undefined) {
+                const avgRad = (avgDegrees - 90) * (Math.PI / 180);
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius - 36, avgRad - 0.25, avgRad + 0.25);
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+                ctx.lineWidth = 7;
+                ctx.stroke();
+            }
+
+            const needleRad = (degrees) * (Math.PI / 180);
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(needleRad);
+            ctx.beginPath();
+            ctx.moveTo(0, -radius + 26);
+            ctx.lineTo(8, 0);
+            ctx.lineTo(-8, 0);
+            ctx.closePath();
+            ctx.fillStyle = '#00f0ff';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fillStyle = skin.pinColor;
+            ctx.fill();
+            ctx.strokeStyle = skin.faceBorder;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Equalized compass reading font size to match 12% scale of other gauges
+            const compassValFontSize = Math.max(16, Math.round(w * 0.12));
+            ctx.fillStyle = skin.digitalColor;
+            ctx.font = `bold ${compassValFontSize}px Arial, Helvetica, sans-serif`;
+            const cardStr = degToCardinal(degrees);
+            ctx.fillText(`${cardStr} (${String(Math.round(degrees)).padStart(3, '0')}°)`, cx, cy + radius * 0.42);
+        }
+
+        function renderAllGauges() {
+            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+            const nameEl = document.getElementById('display-station-name');
+            const locEl = document.getElementById('display-station-loc');
+            if (nameEl) nameEl.innerText = curSt.name;
+            if (locEl) locEl.innerText = curSt.location || "Interlachen, FL";
+
+            let displayWindSpeed = weatherData.windSpeed;
+            let displayWindGust = weatherData.windGust;
+            let displayWindMax = weatherData.windMax;
+            let windMaxGauge = 50;
+            let windUnitLabel = 'MPH';
+
+            if (currentWindUnit === 'kmh') {
+                displayWindSpeed = mphToKmh(weatherData.windSpeed);
+                displayWindGust = mphToKmh(weatherData.windGust);
+                displayWindMax = mphToKmh(weatherData.windMax);
+                windMaxGauge = 80;
+                windUnitLabel = 'KM/H';
+            } else if (currentWindUnit === 'kts') {
+                displayWindSpeed = mphToKts(weatherData.windSpeed);
+                displayWindGust = mphToKts(weatherData.windGust);
+                displayWindMax = mphToKts(weatherData.windMax);
+                windMaxGauge = 45;
+                windUnitLabel = 'KTS';
+            }
+
+            drawGaugeDial(
+                'gauge-wind-speed', 
+                displayWindSpeed, 
+                0, windMaxGauge, 
+                'WIND', windUnitLabel,
+                [
+                    { from: 0, to: windMaxGauge * 0.25, color: '#00ff66' },
+                    { from: windMaxGauge * 0.25, to: windMaxGauge * 0.5, color: '#ffee00' },
+                    { from: windMaxGauge * 0.5, to: windMaxGauge * 0.75, color: '#ff9900' },
+                    { from: windMaxGauge * 0.75, to: windMaxGauge, color: '#ff3355' }
+                ],
+                { needleColor: '#00f0ff', tickCount: 5 }
+            );
+
+            drawCompassDial('gauge-wind-dir', weatherData.windDeg, weatherData.windAvgDeg);
+
+            const displayTemp = currentTempUnit === 'F' ? weatherData.temp : fToC(weatherData.temp);
+            const minTemp = currentTempUnit === 'F' ? -10 : -20;
+            const maxTemp = currentTempUnit === 'F' ? 110 : 45;
+            drawGaugeDial(
+                'gauge-temp',
+                displayTemp,
+                minTemp, maxTemp,
+                'TEMP', '°' + currentTempUnit,
+                [
+                    { from: minTemp, to: currentTempUnit === 'F' ? 32 : 0, color: '#00f0ff' },
+                    { from: currentTempUnit === 'F' ? 32 : 0, to: currentTempUnit === 'F' ? 85 : 29, color: '#00ff66' },
+                    { from: currentTempUnit === 'F' ? 85 : 29, to: maxTemp, color: '#ff3355' }
+                ],
+                { needleColor: '#ffee00', tickCount: 5 }
+            );
+
+            drawGaugeDial(
+                'gauge-out-hum',
+                weatherData.outHum,
+                0, 100,
+                'HUM', '%',
+                [
+                    { from: 0, to: 30, color: '#ff9900' },
+                    { from: 30, to: 70, color: '#00ff66' },
+                    { from: 70, to: 100, color: '#00f0ff' }
+                ],
+                { needleColor: '#00ff66', tickCount: 5 }
+            );
+
+            const displayInTemp = currentTempUnit === 'F' ? weatherData.inTemp : fToC(weatherData.inTemp);
+            drawGaugeDial(
+                'gauge-in-temp',
+                displayInTemp,
+                minTemp, maxTemp,
+                'IN TEMP', '°' + currentTempUnit,
+                [
+                    { from: minTemp, to: currentTempUnit === 'F' ? 65 : 18, color: '#00f0ff' },
+                    { from: currentTempUnit === 'F' ? 65 : 18, to: currentTempUnit === 'F' ? 80 : 26, color: '#00ff66' },
+                    { from: currentTempUnit === 'F' ? 80 : 26, to: maxTemp, color: '#ff3355' }
+                ],
+                { needleColor: '#00f0ff', tickCount: 5 }
+            );
+
+            drawGaugeDial(
+                'gauge-in-hum',
+                weatherData.inHum,
+                0, 100,
+                'IN HUM', '%',
+                [
+                    { from: 0, to: 30, color: '#ff9900' },
+                    { from: 30, to: 65, color: '#00ff66' },
+                    { from: 65, to: 100, color: '#ff3355' }
+                ],
+                { needleColor: '#14b8a6', tickCount: 5 }
+            );
+
+            if (currentBaroUnit === 'inhg') {
+                drawGaugeDial(
+                    'gauge-baro',
+                    weatherData.baroInhg,
+                    28.5, 31.5,
+                    'BARO', 'inHg',
+                    [
+                        { from: 28.5, to: 29.8, color: '#ff9900' },
+                        { from: 29.8, to: 30.2, color: '#00ff66' },
+                        { from: 30.2, to: 31.5, color: '#00f0ff' }
+                    ],
+                    { needleColor: '#00ff66', tickCount: 6, valDecimals: 2, digitalYOffset: 0.30 }
+                );
+            } else {
+                drawGaugeDial(
+                    'gauge-baro',
+                    weatherData.baroHpa,
+                    965, 1065,
+                    'BARO', 'hPa',
+                    [
+                        { from: 965, to: 1008, color: '#ff9900' },
+                        { from: 1008, to: 1022, color: '#00ff66' },
+                        { from: 1022, to: 1065, color: '#00f0ff' }
+                    ],
+                    { needleColor: '#00ff66', tickCount: 5, valDecimals: 1, digitalYOffset: 0.30 }
+                );
+            }
+
+            const elWindSpeed = document.getElementById('val-wind-speed');
+            if (elWindSpeed) elWindSpeed.innerText = displayWindSpeed.toFixed(1);
+
+            const elWindGust = document.getElementById('val-wind-gust');
+            if (elWindGust) elWindGust.innerText = displayWindGust.toFixed(1);
+
+            const elWindCardinal = document.getElementById('val-wind-cardinal');
+            if (elWindCardinal) elWindCardinal.innerText = `${degToCardinal(weatherData.windDeg)} (${String(Math.round(weatherData.windDeg)).padStart(3, '0')}°)`;
+
+            const elTemp = document.getElementById('val-temp');
+            if (elTemp) elTemp.innerText = `${displayTemp.toFixed(1)}°${currentTempUnit}`;
+
+            const elFeels = document.getElementById('val-feels');
+            if (elFeels) elFeels.innerText = `${(currentTempUnit === 'F' ? weatherData.feels : fToC(weatherData.feels)).toFixed(1)}° / ${(currentTempUnit === 'F' ? weatherData.dew : fToC(weatherData.dew)).toFixed(1)}°`;
+
+            const elOutHum = document.getElementById('val-out-humidity-digital');
+            if (elOutHum) elOutHum.innerText = `${weatherData.outHum}%`;
+
+            const elBaroInhg = document.getElementById('val-baro-inhg');
+            if (elBaroInhg) elBaroInhg.innerText = weatherData.baroInhg.toFixed(2);
+
+            const elBaroHpa = document.getElementById('val-baro-hpa');
+            if (elBaroHpa) elBaroHpa.innerText = weatherData.baroHpa.toFixed(1);
+
+            const rMult = currentRainUnit === 'mm' ? 25.4 : 1;
+            const rUnitStr = currentRainUnit === 'mm' ? 'mm' : 'in';
+
+            const elRainEvent = document.getElementById('val-rain-event');
+            if (elRainEvent) elRainEvent.innerText = `${(weatherData.rainEvent * rMult).toFixed(2)} ${rUnitStr}`;
+
+            const elRainDaily = document.getElementById('val-rain-daily');
+            if (elRainDaily) elRainDaily.innerText = `${(weatherData.rainDaily * rMult).toFixed(2)} ${rUnitStr}`;
+
+            const elSolar = document.getElementById('val-solar');
+            if (elSolar) elSolar.innerText = `${Math.round(weatherData.solar)} W/m²`;
+
+            const elUv = document.getElementById('val-uv');
+            if (elUv) elUv.innerText = `${weatherData.uv} (${getUvIndexCategory(weatherData.uv)})`;
+
+            const elInTemp = document.getElementById('val-in-temp');
+            if (elInTemp) elInTemp.innerText = `${displayInTemp.toFixed(1)}°${currentTempUnit}`;
+
+            const elInHum = document.getElementById('val-in-hum');
+            if (elInHum) elInHum.innerText = `${weatherData.inHum}%`;
+
+            const digWindSpd = document.getElementById('digital-wind-speed');
+            if (digWindSpd) digWindSpd.innerText = displayWindSpeed.toFixed(1);
+
+            const digWindDir = document.getElementById('digital-wind-dir');
+            if (digWindDir) digWindDir.innerText = `${degToCardinal(weatherData.windDeg)} (${String(Math.round(weatherData.windDeg)).padStart(3, '0')}°)`;
+
+            const digTemp = document.getElementById('digital-temp');
+            if (digTemp) digTemp.innerText = `${displayTemp.toFixed(1)}°${currentTempUnit}`;
+
+            const digOutHum = document.getElementById('digital-out-hum');
+            if (digOutHum) digOutHum.innerText = `${weatherData.outHum}%`;
+
+            const digInTemp = document.getElementById('digital-in-temp');
+            if (digInTemp) digInTemp.innerText = `${displayInTemp.toFixed(1)}°${currentTempUnit}`;
+
+            const digInHum = document.getElementById('digital-in-hum');
+            if (digInHum) digInHum.innerText = `${weatherData.inHum}%`;
+
+            const digBaro = document.getElementById('digital-baro');
+            if (digBaro) {
+                if (currentBaroUnit === 'inhg') digBaro.innerText = `${weatherData.baroInhg.toFixed(2)} inHg`;
+                else digBaro.innerText = `${weatherData.baroHpa.toFixed(1)} hPa`;
+            }
+
+            renderRainView();
+
+            const rainLed = document.getElementById('led-rain-flag');
+            if (rainLed) {
+                if (weatherData.rainRate > 0) {
+                    rainLed.className = 'led-indicator led-red';
+                } else {
+                    rainLed.className = 'led-indicator led-off';
+                }
+            }
+        }
+
+        function initCharts() {
+            const chartFontFamily = "Arial, Helvetica, sans-serif";
+
+            const ctxWind = document.getElementById('chart-wind').getContext('2d');
+            windChart = new Chart(ctxWind, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Speed',
+                            data: [],
+                            borderColor: '#00f0ff',
+                            backgroundColor: 'rgba(0, 240, 255, 0.15)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2
                         },
-                        y: { 
-                            ticks: { color: '#94a3b8', font: { size: 9 } }, 
-                            grid: { color: '#334155' },
-                            beginAtZero: beginZero
+                        {
+                            label: 'Gust',
+                            data: [],
+                            borderColor: '#ffee00',
+                            borderDash: [4, 4],
+                            fill: false,
+                            tension: 0.2,
+                            borderWidth: 1.5
                         }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#cbd5e1', font: { family: chartFontFamily, size: 10, weight: 'bold' } } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#00f0ff', font: { family: chartFontFamily, size: 10, weight: 'bold' } }, beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#e2e8f0', font: { family: chartFontFamily, size: 11, weight: 'bold' } } }
+                    }
+                }
+            });
+
+            const ctxTemp = document.getElementById('chart-temp-baro').getContext('2d');
+            tempBaroChart = new Chart(ctxTemp, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Outdoor Temp',
+                            data: [],
+                            borderColor: '#ffee00',
+                            yAxisID: 'yTemp',
+                            tension: 0.3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Barometer',
+                            data: [],
+                            borderColor: '#00ff66',
+                            yAxisID: 'yBaro',
+                            tension: 0.3,
+                            borderWidth: 1.5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#cbd5e1', font: { family: chartFontFamily, size: 10, weight: 'bold' } } },
+                        yTemp: { position: 'left', grid: { color: '#1e293b' }, ticks: { color: '#ffee00', font: { family: chartFontFamily, size: 10, weight: 'bold' } } },
+                        yBaro: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#00ff66', font: { family: chartFontFamily, size: 10, weight: 'bold' } } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#e2e8f0', font: { family: chartFontFamily, size: 11, weight: 'bold' } } }
                     }
                 }
             });
         }
 
-        function closeHistoryModal() {
-            const modal = document.getElementById('historyModal');
-            if (modal) modal.classList.add('hidden');
+        function pushChartData() {
+            const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            if (windChart) {
+                const wSpd = currentWindUnit === 'kmh' ? mphToKmh(weatherData.windSpeed) : (currentWindUnit === 'kts' ? mphToKts(weatherData.windSpeed) : weatherData.windSpeed);
+                const wGst = currentWindUnit === 'kmh' ? mphToKmh(weatherData.windGust) : (currentWindUnit === 'kts' ? mphToKts(weatherData.windGust) : weatherData.windGust);
+
+                windChart.data.labels.push(nowStr);
+                windChart.data.datasets[0].data.push(wSpd);
+                windChart.data.datasets[1].data.push(wGst);
+
+                if (windChart.data.labels.length > maxChartHistory) {
+                    windChart.data.labels.shift();
+                    windChart.data.datasets[0].data.shift();
+                    windChart.data.datasets[1].data.shift();
+                }
+                windChart.update();
+            }
+
+            if (tempBaroChart) {
+                const displayT = currentTempUnit === 'F' ? weatherData.temp : fToC(weatherData.temp);
+                const displayB = currentBaroUnit === 'inhg' ? weatherData.baroInhg : weatherData.baroHpa;
+
+                tempBaroChart.data.labels.push(nowStr);
+                tempBaroChart.data.datasets[0].data.push(displayT);
+                tempBaroChart.data.datasets[1].data.push(displayB);
+
+                if (tempBaroChart.data.labels.length > maxChartHistory) {
+                    tempBaroChart.data.labels.shift();
+                    tempBaroChart.data.datasets[0].data.shift();
+                    tempBaroChart.data.datasets[1].data.shift();
+                }
+                tempBaroChart.update();
+            }
         }
 
-        function openSettingsModal() {
+        function startSimulationLoop() {
+            setInterval(() => {
+                if (!isSimulation) return;
+
+                weatherData.windSpeed = Math.max(0, weatherData.windSpeed + (Math.random() * 2.4 - 1.2));
+                weatherData.windGust = Math.max(weatherData.windSpeed, weatherData.windSpeed + Math.random() * 4);
+                if (weatherData.windGust > weatherData.windMax) weatherData.windMax = weatherData.windGust;
+
+                weatherData.windDeg = (weatherData.windDeg + (Math.random() * 12 - 6) + 360) % 360;
+                weatherData.windAvgDeg = (weatherData.windAvgDeg * 0.9) + (weatherData.windDeg * 0.1);
+
+                weatherData.temp += (Math.random() * 0.2 - 0.1);
+                weatherData.baroInhg += (Math.random() * 0.004 - 0.002);
+                weatherData.baroHpa = weatherData.baroInhg * 33.8639;
+
+                renderAllGauges();
+                pushChartData();
+                const lastTime = document.getElementById('last-update-time');
+                if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
+            }, 3000);
+        }
+
+        async function fetchLocationLiveWeather(locQuery) {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locQuery)}`);
+            if (!geoRes.ok) throw new Error("Geocoding failed");
+            const geoData = await geoRes.json();
+            if (!geoData || geoData.length === 0) throw new Error("Location not found");
+
+            const lat = parseFloat(geoData[0].lat);
+            const lon = parseFloat(geoData[0].lon);
+
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,surface_pressure,wind_speed_10m,wind_direction_10m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`;
+            
+            const wRes = await fetch(weatherUrl);
+            if (!wRes.ok) throw new Error("Weather fetch failed");
+            const wData = await wRes.json();
+
+            if (wData && wData.current) {
+                const cur = wData.current;
+                weatherData.temp = cur.temperature_2m;
+                weatherData.feels = cur.apparent_temperature;
+                weatherData.dew = cur.temperature_2m - ((100 - cur.relative_humidity_2m) / 5);
+                weatherData.tempMax = wData.daily?.temperature_2m_max?.[0] || cur.temperature_2m + 4;
+                weatherData.tempMin = wData.daily?.temperature_2m_min?.[0] || cur.temperature_2m - 4;
+                
+                weatherData.windSpeed = cur.wind_speed_10m;
+                weatherData.windGust = cur.wind_speed_10m * 1.3;
+                if (weatherData.windGust > weatherData.windMax) weatherData.windMax = weatherData.windGust;
+                weatherData.windDeg = cur.wind_direction_10m || 0;
+                weatherData.windAvgDeg = cur.wind_direction_10m || 0;
+
+                weatherData.outHum = cur.relative_humidity_2m;
+                weatherData.baroInhg = (cur.surface_pressure ? cur.surface_pressure / 33.8639 : 29.92);
+                weatherData.baroHpa = cur.surface_pressure || 1013.2;
+                weatherData.rainRate = cur.precipitation || 0;
+
+                renderAllGauges();
+                pushChartData();
+            }
+        }
+
+        async function fetchLiveApiData() {
+            if (isSimulation) return;
+
+            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+            const statusText = document.getElementById('sync-source-badge');
+            const statusLed = document.getElementById('status-led');
+
+            if (!curSt.apiKey || curSt.apiKey.trim() === "") {
+                try {
+                    await fetchLocationLiveWeather(curSt.location || curSt.name);
+                    if (statusText) statusText.innerText = 'Location (Live)';
+                    if (statusLed) statusLed.className = 'led-indicator led-green';
+                    const lastTime = document.getElementById('last-update-time');
+                    if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
+                } catch (err) {
+                    if (statusText) statusText.innerText = 'Location Error';
+                    if (statusLed) statusLed.className = 'led-indicator led-red';
+                }
+                return;
+            }
+
+            try {
+                const targetUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=1`;
+                let data = null;
+
+                try {
+                    const response = await fetch(targetUrl);
+                    if (response.ok) data = await response.json();
+                } catch(e){}
+
+                if (!data) {
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                        const response = await fetch(proxyUrl);
+                        if (response.ok) {
+                            const wrapper = await response.json();
+                            if (wrapper.contents) data = JSON.parse(wrapper.contents);
+                        }
+                    } catch(e){}
+                }
+
+                if (!data) {
+                    try {
+                        const proxyUrl2 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                        const response = await fetch(proxyUrl2);
+                        if (response.ok) data = await response.json();
+                    } catch(e){}
+                }
+
+                if (data && Array.isArray(data) && data.length > 0) {
+                    let matchedDevice = null;
+                    if (curSt.macAddress && curSt.macAddress.trim() !== "") {
+                        const cleanTargetMac = curSt.macAddress.replace(/[:\-]/g, '').trim().toLowerCase();
+                        matchedDevice = data.find(dev => {
+                            const rawMac = dev.mac || dev.macAddress || dev.info?.mac || "";
+                            return rawMac.replace(/[:\-]/g, '').trim().toLowerCase() === cleanTargetMac;
+                        });
+                    }
+                    if (!matchedDevice) matchedDevice = data[0];
+
+                    const lastData = matchedDevice?.lastData;
+                    if (lastData) {
+                        weatherData.windSpeed = lastData.windspeedmph || 0;
+                        weatherData.windGust = lastData.windgustmph || 0;
+                        weatherData.windMax = lastData.maxdailygust || weatherData.windGust;
+                        weatherData.windDeg = lastData.winddir || 0;
+                        weatherData.windAvgDeg = lastData.winddir_avg10m || lastData.winddir || 0;
+
+                        weatherData.temp = lastData.tempf || 0;
+                        weatherData.feels = lastData.feelsLike || lastData.tempf || 0;
+                        weatherData.dew = lastData.dewPoint || 0;
+
+                        weatherData.baroInhg = lastData.baromrelin || 29.92;
+                        weatherData.baroHpa = lastData.baroHpa || (weatherData.baroInhg * 33.8639);
+
+                        weatherData.rainRate = lastData.hourlyrainin || 0;
+                        weatherData.rainEvent = lastData.eventrainin || 0;
+                        weatherData.rainDaily = lastData.dailyrainin || 0;
+                        weatherData.rainWeekly = lastData.weeklyrainin || 0;
+                        weatherData.rainMonthly = lastData.monthlyrainin || 0;
+
+                        // Parse last rain timestamp dynamically from telemetry packet
+                        if (lastData.lastRain) {
+                            const rainDate = new Date(lastData.lastRain);
+                            if (!isNaN(rainDate.getTime())) {
+                                const isToday = rainDate.toDateString() === new Date().toDateString();
+                                const timeStr = rainDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                                weatherData.rainLastTimeStr = isToday ? timeStr : `${rainDate.getMonth() + 1}/${rainDate.getDate()} ${timeStr}`;
+                            }
+                        } else if (lastData.date) {
+                            const pktDate = new Date(lastData.date);
+                            if (!isNaN(pktDate.getTime()) && weatherData.rainDaily > 0) {
+                                weatherData.rainLastTimeStr = pktDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                            }
+                        }
+
+                        weatherData.solar = lastData.solarradiation || 0;
+                        weatherData.uv = lastData.uv || 0;
+
+                        weatherData.inTemp = lastData.tempinf || 0;
+                        weatherData.inHum = lastData.humidityin || 0;
+                        weatherData.outHum = lastData.humidity || 0;
+
+                        renderAllGauges();
+                        pushChartData();
+                        if (statusText) statusText.innerText = 'Ambient API (Live)';
+                        if (statusLed) statusLed.className = 'led-indicator led-green';
+                        const lastTime = document.getElementById('last-update-time');
+                        if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
+                    }
+                } else {
+                    throw new Error("No valid data returned from API");
+                }
+            } catch (err) {
+                console.warn('API Fetch warning:', err);
+                if (statusText) statusText.innerText = 'API Error (Demo)';
+                if (statusLed) statusLed.className = 'led-indicator led-yellow';
+            }
+        }
+
+        window.toggleSimulation = function() {
+            isSimulation = !isSimulation;
+            const btnText = document.getElementById('sim-btn-text');
+            const statusText = document.getElementById('sync-source-badge');
+            const statusLed = document.getElementById('status-led');
+
+            if (isSimulation) {
+                if (btnText) btnText.innerText = 'Demo Mode: ON';
+                if (statusText) statusText.innerText = 'Simulated Data';
+                if (statusLed) statusLed.className = 'led-indicator led-green';
+                if (updateInterval) clearInterval(updateInterval);
+            } else {
+                if (btnText) btnText.innerText = 'Demo Mode: OFF';
+                fetchLiveApiData();
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
+            }
+        };
+
+        window.forceRefreshConnection = function() {
+            const icon = document.getElementById('refresh-icon');
+            if (icon) icon.classList.add('fa-spin');
+            setTimeout(() => {
+                location.reload();
+            }, 300);
+        };
+
+        window.addNewStation = function() {
+            saveFormToCurrentStationIndex();
+            const newIndex = config.stations.length;
+            config.stations.push({
+                name: "New Weather Station",
+                location: "",
+                macAddress: "",
+                apiKey: "",
+                appKey: "",
+                tempUnit: "F",
+                baroUnit: "hpa",
+                windUnit: "mph",
+                rainUnit: "in",
+                digitalFontSize: 40,
+                gaugeScale: 240,
+                refreshInterval: 15000
+            });
+            config.activeStationIndex = newIndex;
             populateStationDropdown();
             loadActiveStationIntoForm();
+        };
 
-            const tempUnitSel = document.getElementById('settingTempUnit');
-            const pressUnitSel = document.getElementById('settingPressUnit');
-            const windUnitSel = document.getElementById('settingWindUnit');
-            const rainUnitSel = document.getElementById('settingRainUnit');
-            const refreshIntSel = document.getElementById('settingRefreshInterval');
-
-            if (tempUnitSel) tempUnitSel.value = config.tempUnit;
-            if (pressUnitSel) pressUnitSel.value = config.pressUnit;
-            if (windUnitSel) windUnitSel.value = config.windUnit;
-            if (rainUnitSel) config.rainUnit = rainUnitSel.value;
-            if (refreshIntSel) refreshIntSel.value = config.refreshInterval;
-
-            updateModeBtns(config.isLiveMode);
-            const modal = document.getElementById('settingsModal');
-            if (modal) modal.classList.remove('hidden');
-        }
-
-        function populateStationDropdown() {
-            const selectEl = document.getElementById('settingStationSelect');
-            if (!selectEl) return;
-            selectEl.innerHTML = "";
-            config.stations.forEach((st, idx) => {
-                const opt = document.createElement('option');
-                opt.value = idx;
-                opt.innerText = st.name;
-                if (idx === config.activeStationIndex) opt.selected = true;
-                selectEl.appendChild(opt);
-            });
-        }
-
-        function loadActiveStationIntoForm() {
-            const st = config.stations[config.activeStationIndex] || config.stations[0];
-            const nameInput = document.getElementById('settingStationName');
-            const locationInput = document.getElementById('settingStationLocation');
-            const apiKeyInput = document.getElementById('settingApiKey');
-            const appKeyInput = document.getElementById('settingAppKey');
-
-            if (nameInput) nameInput.value = st.name;
-            if (locationInput) locationInput.value = st.location || "";
-            if (apiKeyInput) apiKeyInput.value = st.apiKey;
-            if (appKeyInput) appKeyInput.value = st.appKey;
-        }
-
-        function onStationDropdownChange() {
+        window.onStationDropdownChange = function() {
             saveFormToCurrentStationIndex();
-            const selectEl = document.getElementById('settingStationSelect');
+            const selectEl = document.getElementById('setting-station-select');
             if (selectEl) {
                 config.activeStationIndex = parseInt(selectEl.value);
                 loadActiveStationIntoForm();
             }
-        }
+        };
 
-        function saveFormToCurrentStationIndex() {
-            const nameInput = document.getElementById('settingStationName');
-            const locationInput = document.getElementById('settingStationLocation');
-            const apiKeyInput = document.getElementById('settingApiKey');
-            const appKeyInput = document.getElementById('settingAppKey');
-
-            if (config.stations[config.activeStationIndex]) {
-                if (nameInput) config.stations[config.activeStationIndex].name = nameInput.value.trim() || "Station " + (config.activeStationIndex + 1);
-                if (locationInput) config.stations[config.activeStationIndex].location = locationInput.value.trim();
-                if (apiKeyInput) config.stations[config.activeStationIndex].apiKey = apiKeyInput.value.trim();
-                if (appKeyInput) config.stations[config.activeStationIndex].appKey = appKeyInput.value.trim();
-            }
-        }
-
-        function addNewStation() {
-            saveFormToCurrentStationIndex();
-            config.stations.push({
-                name: "Station " + (config.stations.length + 1),
-                location: "City, State",
-                apiKey: "",
-                appKey: ""
-            });
-            config.activeStationIndex = config.stations.length - 1;
-            populateStationDropdown();
-            loadActiveStationIntoForm();
-        }
-
-        function deleteCurrentStation() {
+        window.deleteCurrentStation = function() {
             if (config.stations.length <= 1) {
-                alert("You must keep at least one weather station.");
                 return;
             }
             config.stations.splice(config.activeStationIndex, 1);
             config.activeStationIndex = Math.max(0, config.activeStationIndex - 1);
             populateStationDropdown();
             loadActiveStationIntoForm();
+        };
+
+        function populateStationDropdown() {
+            const selectEl = document.getElementById('setting-station-select');
+            if (!selectEl) return;
+            selectEl.innerHTML = '';
+            config.stations.forEach((st, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = st.name || `Station ${idx + 1}`;
+                if (idx === config.activeStationIndex) opt.selected = true;
+                selectEl.appendChild(opt);
+            });
         }
 
-        function closeSettingsModal() {
-            const modal = document.getElementById('settingsModal');
-            if (modal) modal.classList.add('hidden');
+        function saveFormToCurrentStationIndex() {
+            const idx = config.activeStationIndex;
+            if (!config.stations[idx]) return;
+
+            const nameVal = document.getElementById('setting-station-name')?.value;
+            const locVal = document.getElementById('setting-station-location')?.value;
+            const macVal = document.getElementById('setting-mac-addr')?.value;
+            const apiVal = document.getElementById('setting-api-key')?.value;
+            const appVal = document.getElementById('setting-app-key')?.value;
+            const tempVal = document.getElementById('setting-temp-unit')?.value;
+            const baroVal = document.getElementById('setting-baro-unit')?.value;
+            const windVal = document.getElementById('setting-wind-unit')?.value;
+            const rainVal = document.getElementById('setting-rain-unit')?.value;
+            const fontSizeVal = parseInt(document.getElementById('setting-digital-font-size')?.value || '40');
+            const gaugeScaleVal = parseInt(document.getElementById('setting-gauge-scale')?.value || '240');
+            const refreshVal = parseInt(document.getElementById('setting-refresh-interval')?.value || '15000');
+
+            config.stations[idx].name = nameVal || "KD4BEE WX";
+            config.stations[idx].location = locVal || "Interlachen, FL";
+            config.stations[idx].macAddress = macVal || "";
+            config.stations[idx].apiKey = apiVal || "";
+            config.stations[idx].appKey = appVal || "";
+            config.stations[idx].tempUnit = tempVal || "F";
+            config.stations[idx].baroUnit = baroVal || "hpa";
+            config.stations[idx].windUnit = windVal || "mph";
+            config.stations[idx].rainUnit = rainVal || "in";
+            config.stations[idx].digitalFontSize = fontSizeVal;
+            config.stations[idx].gaugeScale = gaugeScaleVal;
+            config.stations[idx].refreshInterval = refreshVal;
         }
 
-        function setMode(isLive) {
-            config.isLiveMode = isLive;
-            updateModeBtns(isLive);
-        }
+        function loadActiveStationIntoForm() {
+            const st = config.stations[config.activeStationIndex] || config.stations[0];
+            if (!st) return;
 
-        function updateModeBtns(isLive) {
-            const liveBtn = document.getElementById('modeLiveBtn');
-            const demoBtn = document.getElementById('modeDemoBtn');
-            if (liveBtn && demoBtn) {
-                if (isLive) {
-                    liveBtn.className = "py-1.5 rounded-lg text-xs font-bold bg-sky-500 text-slate-950 shadow cursor-pointer";
-                    demoBtn.className = "py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer";
-                } else {
-                    demoBtn.className = "py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 shadow cursor-pointer";
-                    liveBtn.className = "py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer";
-                }
+            if (document.getElementById('setting-station-name')) document.getElementById('setting-station-name').value = st.name || '';
+            if (document.getElementById('setting-station-location')) document.getElementById('setting-station-location').value = st.location || '';
+            if (document.getElementById('setting-mac-addr')) document.getElementById('setting-mac-addr').value = st.macAddress || '';
+            if (document.getElementById('setting-api-key')) document.getElementById('setting-api-key').value = st.apiKey || '';
+            if (document.getElementById('setting-app-key')) document.getElementById('setting-app-key').value = st.appKey || '';
+            if (document.getElementById('setting-temp-unit')) document.getElementById('setting-temp-unit').value = st.tempUnit || 'F';
+            if (document.getElementById('setting-baro-unit')) document.getElementById('setting-baro-unit').value = st.baroUnit || 'hpa';
+            if (document.getElementById('setting-wind-unit')) document.getElementById('setting-wind-unit').value = st.windUnit || 'mph';
+            if (document.getElementById('setting-rain-unit')) document.getElementById('setting-rain-unit').value = st.rainUnit || 'in';
+            
+            const fontSlider = document.getElementById('setting-digital-font-size');
+            if (fontSlider) {
+                fontSlider.value = st.digitalFontSize || 40;
+                const fontLbl = document.getElementById('lbl-digital-font-size');
+                if (fontLbl) fontLbl.innerText = (st.digitalFontSize || 40) + 'px';
             }
+
+            const gaugeSlider = document.getElementById('setting-gauge-scale');
+            if (gaugeSlider) {
+                gaugeSlider.value = st.gaugeScale || 240;
+                const gaugeLbl = document.getElementById('lbl-gauge-scale');
+                if (gaugeLbl) gaugeLbl.innerText = (st.gaugeScale || 240) + 'px';
+            }
+
+            if (document.getElementById('setting-refresh-interval')) document.getElementById('setting-refresh-interval').value = st.refreshInterval || 15000;
         }
 
-        function saveSettings() {
+        window.saveStationSettings = function() {
             saveFormToCurrentStationIndex();
+            const curSt = config.stations[config.activeStationIndex];
 
-            const tempUnitSel = document.getElementById('settingTempUnit');
-            const pressUnitSel = document.getElementById('settingPressUnit');
-            const windUnitSel = document.getElementById('settingWindUnit');
-            const rainUnitSel = document.getElementById('settingRainUnit');
-            const refreshIntSel = document.getElementById('settingRefreshInterval');
+            if (curSt) {
+                currentTempUnit = curSt.tempUnit;
+                currentBaroUnit = curSt.baroUnit;
+                currentWindUnit = curSt.windUnit;
+                currentRainUnit = curSt.rainUnit;
+                refreshIntervalMs = curSt.refreshInterval;
 
-            if (tempUnitSel) config.tempUnit = tempUnitSel.value;
-            if (pressUnitSel) config.pressUnit = pressUnitSel.value;
-            if (windUnitSel) config.windUnit = windUnitSel.value;
-            if (rainUnitSel) config.rainUnit = rainUnitSel.value;
-            if (refreshIntSel) config.refreshInterval = refreshIntSel.value;
+                setDigitalFontSize(curSt.digitalFontSize || 40);
+                setGaugeScale(curSt.gaugeScale || 240);
+            }
 
-            saveConfigToStorage();
-            setupTimer();
-            closeSettingsModal();
-            refreshData();
-        }
+            window.closeConfigModal();
+
+            if (!isSimulation) {
+                fetchLiveApiData();
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
+            }
+        };
+
+        window.onload = function() {
+            initClocks();
+            initCharts();
+            applyPaneDisplayModes();
+            renderAllGauges();
+            startSimulationLoop();
+
+            fetchLiveApiData();
+            updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
+        };
     </script>
 </body>
 </html>
