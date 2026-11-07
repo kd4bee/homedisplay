@@ -897,19 +897,28 @@
                     computedDryStreakDays = 0;
                 }
 
+                // Determine display string for last rain event
+                let lastRainDisplay = weatherData.rainLastTimeStr || '3:05 PM';
+                if (isRaining) {
+                    lastRainDisplay = 'NOW';
+                } else if (weatherData.rainDaily > 0 && lastRainDisplay === '3:05 PM') {
+                    // If rain recorded today, ensure readout indicates today's activity
+                    lastRainDisplay = `Today ${lastRainDisplay}`;
+                }
+
                 container.innerHTML = `
                     <div class="space-y-2">
                         <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <span class="led-indicator ${isRaining ? 'led-red animate-ping' : 'led-off'}"></span>
-                                <span class="text-xs font-bold text-slate-200">${isRaining ? 'ACTIVE RAIN DETECTED' : 'NO ACTIVE PRECIPITATION'}</span>
+                                <span class="led-indicator ${isRaining ? 'led-red animate-ping' : (weatherData.rainDaily > 0 ? 'led-yellow' : 'led-off')}"></span>
+                                <span class="text-xs font-bold text-slate-200">${isRaining ? 'ACTIVE RAIN DETECTED' : (weatherData.rainDaily > 0 ? 'RAIN RECORDED TODAY' : 'NO ACTIVE PRECIPITATION')}</span>
                             </div>
                             <span class="text-[10px] bg-slate-800 text-cyan-300 px-2 py-0.5 rounded border border-slate-700">Storm Guard</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-center">
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase">LAST RAIN EVENT</div>
-                                <div class="text-sm font-bold text-amber-300">${isRaining ? 'NOW' : (weatherData.rainLastTimeStr || '3:05 PM')}</div>
+                                <div class="text-sm font-bold text-amber-300">${lastRainDisplay}</div>
                             </div>
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase">DRY STREAK</div>
@@ -927,15 +936,30 @@
             const ctx = canvas.getContext('2d');
             const rMult = currentRainUnit === 'mm' ? 25.4 : 1;
 
+            // Generate past 7 days dates with Month & Day number (e.g. "Oct 27", "Nov 2")
+            const dateLabels = [];
+            const dailyData = weatherData.weeklyHistory || [0, 0, 0, 0, 0, 0, weatherData.rainDaily];
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const monthStr = d.toLocaleDateString('en-US', { month: 'short' });
+                const dayNum = d.getDate();
+                dateLabels.push(`${monthStr} ${dayNum}`);
+            }
+
+            // Convert to display units
+            const chartData = dailyData.map(val => Number((val * rMult).toFixed(2)));
+
             if (rainBarChart) rainBarChart.destroy();
             rainBarChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    labels: dateLabels,
                     datasets: [{
                         label: 'Rain (' + (currentRainUnit.toUpperCase()) + ')',
-                        data: [0.00, 0.12 * rMult, 0.00, 0.04 * rMult, 0.28 * rMult, 0.00, weatherData.rainDaily * rMult],
-                        backgroundColor: '#00f0ff',
+                        data: chartData,
+                        backgroundColor: chartData.map((v, i) => i === 6 ? '#00ff66' : '#00f0ff'),
                         borderRadius: 4
                     }]
                 },
@@ -1725,8 +1749,20 @@
                         weatherData.rainWeekly = lastData.weeklyrainin || 0;
                         weatherData.rainMonthly = lastData.monthlyrainin || 0;
 
-                        // Preserve your exact station rain time ("3:05 PM") instead of letting API UTC conversion override it
-                        // weatherData.rainLastTimeStr = ...;
+                        // Parse last rain timestamp dynamically from telemetry packet
+                        if (lastData.lastRain) {
+                            const rainDate = new Date(lastData.lastRain);
+                            if (!isNaN(rainDate.getTime())) {
+                                const isToday = rainDate.toDateString() === new Date().toDateString();
+                                const timeStr = rainDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                                weatherData.rainLastTimeStr = isToday ? timeStr : `${rainDate.getMonth() + 1}/${rainDate.getDate()} ${timeStr}`;
+                            }
+                        } else if (lastData.date) {
+                            const pktDate = new Date(lastData.date);
+                            if (!isNaN(pktDate.getTime()) && weatherData.rainDaily > 0) {
+                                weatherData.rainLastTimeStr = pktDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                            }
+                        }
 
                         weatherData.solar = lastData.solarradiation || 0;
                         weatherData.uv = lastData.uv || 0;
@@ -1779,104 +1815,138 @@
             }, 300);
         };
 
+        window.addNewStation = function() {
+            saveFormToCurrentStationIndex();
+            const newIndex = config.stations.length;
+            config.stations.push({
+                name: "New Weather Station",
+                location: "",
+                macAddress: "",
+                apiKey: "",
+                appKey: "",
+                tempUnit: "F",
+                baroUnit: "hpa",
+                windUnit: "mph",
+                rainUnit: "in",
+                digitalFontSize: 40,
+                gaugeScale: 240,
+                refreshInterval: 15000
+            });
+            config.activeStationIndex = newIndex;
+            populateStationDropdown();
+            loadActiveStationIntoForm();
+        };
+
+        window.onStationDropdownChange = function() {
+            saveFormToCurrentStationIndex();
+            const selectEl = document.getElementById('setting-station-select');
+            if (selectEl) {
+                config.activeStationIndex = parseInt(selectEl.value);
+                loadActiveStationIntoForm();
+            }
+        };
+
+        window.deleteCurrentStation = function() {
+            if (config.stations.length <= 1) {
+                return;
+            }
+            config.stations.splice(config.activeStationIndex, 1);
+            config.activeStationIndex = Math.max(0, config.activeStationIndex - 1);
+            populateStationDropdown();
+            loadActiveStationIntoForm();
+        };
+
         function populateStationDropdown() {
             const selectEl = document.getElementById('setting-station-select');
             if (!selectEl) return;
-            selectEl.innerHTML = "";
+            selectEl.innerHTML = '';
             config.stations.forEach((st, idx) => {
                 const opt = document.createElement('option');
                 opt.value = idx;
-                opt.innerText = st.name;
+                opt.innerText = st.name || `Station ${idx + 1}`;
                 if (idx === config.activeStationIndex) opt.selected = true;
                 selectEl.appendChild(opt);
             });
         }
 
+        function saveFormToCurrentStationIndex() {
+            const idx = config.activeStationIndex;
+            if (!config.stations[idx]) return;
+
+            const nameVal = document.getElementById('setting-station-name')?.value;
+            const locVal = document.getElementById('setting-station-location')?.value;
+            const macVal = document.getElementById('setting-mac-addr')?.value;
+            const apiVal = document.getElementById('setting-api-key')?.value;
+            const appVal = document.getElementById('setting-app-key')?.value;
+            const tempVal = document.getElementById('setting-temp-unit')?.value;
+            const baroVal = document.getElementById('setting-baro-unit')?.value;
+            const windVal = document.getElementById('setting-wind-unit')?.value;
+            const rainVal = document.getElementById('setting-rain-unit')?.value;
+            const fontSizeVal = parseInt(document.getElementById('setting-digital-font-size')?.value || '40');
+            const gaugeScaleVal = parseInt(document.getElementById('setting-gauge-scale')?.value || '240');
+            const refreshVal = parseInt(document.getElementById('setting-refresh-interval')?.value || '15000');
+
+            config.stations[idx].name = nameVal || "KD4BEE WX";
+            config.stations[idx].location = locVal || "Interlachen, FL";
+            config.stations[idx].macAddress = macVal || "";
+            config.stations[idx].apiKey = apiVal || "";
+            config.stations[idx].appKey = appVal || "";
+            config.stations[idx].tempUnit = tempVal || "F";
+            config.stations[idx].baroUnit = baroVal || "hpa";
+            config.stations[idx].windUnit = windVal || "mph";
+            config.stations[idx].rainUnit = rainVal || "in";
+            config.stations[idx].digitalFontSize = fontSizeVal;
+            config.stations[idx].gaugeScale = gaugeScaleVal;
+            config.stations[idx].refreshInterval = refreshVal;
+        }
+
         function loadActiveStationIntoForm() {
             const st = config.stations[config.activeStationIndex] || config.stations[0];
-            const nameInput = document.getElementById('setting-station-name');
-            const locationInput = document.getElementById('setting-station-location');
-            const macInput = document.getElementById('setting-mac-addr');
-            const apiKeyInput = document.getElementById('setting-api-key');
-            const appKeyInput = document.getElementById('setting-app-key');
-            const tempUnitInput = document.getElementById('setting-temp-unit');
-            const baroUnitInput = document.getElementById('setting-baro-unit');
-            const windUnitInput = document.getElementById('setting-wind-unit');
-            const rainUnitInput = document.getElementById('setting-rain-unit');
-            const fontSizeInput = document.getElementById('setting-digital-font-size');
-            const fontSizeLbl = document.getElementById('lbl-digital-font-size');
-            const gaugeScaleInput = document.getElementById('setting-gauge-scale');
-            const gaugeScaleLbl = document.getElementById('lbl-gauge-scale');
-            const refreshInput = document.getElementById('setting-refresh-interval');
+            if (!st) return;
 
-            if (nameInput) nameInput.value = st.name;
-            if (locationInput) locationInput.value = st.location || "";
-            if (macInput) macInput.value = st.macAddress || "";
-            if (apiKeyInput) apiKeyInput.value = st.apiKey || "";
-            if (appKeyInput) appKeyInput.value = st.appKey || "";
-            if (tempUnitInput) tempUnitInput.value = st.tempUnit || currentTempUnit;
-            if (baroUnitInput) baroUnitInput.value = st.baroUnit || currentBaroUnit;
-            if (windUnitInput) windUnitInput.value = st.windUnit || currentWindUnit;
-            if (rainUnitInput) rainUnitInput.value = st.rainUnit || currentRainUnit;
-            if (fontSizeInput) fontSizeInput.value = st.digitalFontSize || 40;
-            if (fontSizeLbl) fontSizeLbl.innerText = (st.digitalFontSize || 40) + "px";
-            if (gaugeScaleInput) gaugeScaleInput.value = st.gaugeScale || 240;
-            if (gaugeScaleLbl) gaugeScaleLbl.innerText = (st.gaugeScale || 240) + "px";
-            if (refreshInput) refreshInput.value = st.refreshInterval || refreshIntervalMs;
-        }
-
-        function saveFormToCurrentStationIndex() {
-            const nameInput = document.getElementById('setting-station-name');
-            const locationInput = document.getElementById('setting-station-location');
-            const macInput = document.getElementById('setting-mac-addr');
-            const apiKeyInput = document.getElementById('setting-api-key');
-            const appKeyInput = document.getElementById('setting-app-key');
-            const tempUnitInput = document.getElementById('setting-temp-unit');
-            const baroUnitInput = document.getElementById('setting-baro-unit');
-            const windUnitInput = document.getElementById('setting-wind-unit');
-            const rainUnitInput = document.getElementById('setting-rain-unit');
-            const fontSizeInput = document.getElementById('setting-digital-font-size');
-            const gaugeScaleInput = document.getElementById('setting-gauge-scale');
-            const refreshInput = document.getElementById('setting-refresh-interval');
-
-            if (config.stations[config.activeStationIndex]) {
-                const st = config.stations[config.activeStationIndex];
-                if (nameInput) st.name = nameInput.value.trim() || "Station " + (config.activeStationIndex + 1);
-                if (locationInput) st.location = locationInput.value.trim();
-                if (macInput) st.macAddress = macInput.value.trim();
-                if (apiKeyInput) st.apiKey = apiKeyInput.value.trim();
-                if (appKeyInput) st.appKey = appKeyInput.value.trim();
-                if (tempUnitInput) st.tempUnit = tempUnitInput.value;
-                if (baroUnitInput) st.baroUnit = baroUnitInput.value;
-                if (windUnitInput) st.windUnit = windUnitInput.value;
-                if (rainUnitInput) st.rainUnit = rainUnitInput.value;
-                if (fontSizeInput) st.digitalFontSize = parseInt(fontSizeInput.value);
-                if (gaugeScaleInput) st.gaugeScale = parseInt(gaugeScaleInput.value);
-                if (refreshInput) st.refreshInterval = parseInt(refreshInput.value);
+            if (document.getElementById('setting-station-name')) document.getElementById('setting-station-name').value = st.name || '';
+            if (document.getElementById('setting-station-location')) document.getElementById('setting-station-location').value = st.location || '';
+            if (document.getElementById('setting-mac-addr')) document.getElementById('setting-mac-addr').value = st.macAddress || '';
+            if (document.getElementById('setting-api-key')) document.getElementById('setting-api-key').value = st.apiKey || '';
+            if (document.getElementById('setting-app-key')) document.getElementById('setting-app-key').value = st.appKey || '';
+            if (document.getElementById('setting-temp-unit')) document.getElementById('setting-temp-unit').value = st.tempUnit || 'F';
+            if (document.getElementById('setting-baro-unit')) document.getElementById('setting-baro-unit').value = st.baroUnit || 'hpa';
+            if (document.getElementById('setting-wind-unit')) document.getElementById('setting-wind-unit').value = st.windUnit || 'mph';
+            if (document.getElementById('setting-rain-unit')) document.getElementById('setting-rain-unit').value = st.rainUnit || 'in';
+            
+            const fontSlider = document.getElementById('setting-digital-font-size');
+            if (fontSlider) {
+                fontSlider.value = st.digitalFontSize || 40;
+                const fontLbl = document.getElementById('lbl-digital-font-size');
+                if (fontLbl) fontLbl.innerText = (st.digitalFontSize || 40) + 'px';
             }
-        }
 
-        function applyActiveStationPreferences() {
-            const st = config.stations[config.activeStationIndex] || config.stations[0];
-            if (st.tempUnit) window.setTempUnit(st.tempUnit);
-            if (st.baroUnit) window.setBaroUnit(st.baroUnit);
-            if (st.windUnit) window.setWindUnit(st.windUnit);
-            if (st.rainUnit) window.setRainUnit(st.rainUnit);
-            if (st.digitalFontSize) setDigitalFontSize(st.digitalFontSize);
-            if (st.gaugeScale) setGaugeScale(st.gaugeScale);
-            else setGaugeScale(240);
-            if (st.refreshInterval) {
-                refreshIntervalMs = st.refreshInterval;
+            const gaugeSlider = document.getElementById('setting-gauge-scale');
+            if (gaugeSlider) {
+                gaugeSlider.value = st.gaugeScale || 240;
+                const gaugeLbl = document.getElementById('lbl-gauge-scale');
+                if (gaugeLbl) gaugeLbl.innerText = (st.gaugeScale || 240) + 'px';
             }
+
+            if (document.getElementById('setting-refresh-interval')) document.getElementById('setting-refresh-interval').value = st.refreshInterval || 15000;
         }
 
         window.saveStationSettings = function() {
             saveFormToCurrentStationIndex();
-            localStorage.setItem('christy_ws2902_config', JSON.stringify(config));
-            window.closeConfigModal();
+            const curSt = config.stations[config.activeStationIndex];
 
-            applyActiveStationPreferences();
-            renderAllGauges();
+            if (curSt) {
+                currentTempUnit = curSt.tempUnit;
+                currentBaroUnit = curSt.baroUnit;
+                currentWindUnit = curSt.windUnit;
+                currentRainUnit = curSt.rainUnit;
+                refreshIntervalMs = curSt.refreshInterval;
+
+                setDigitalFontSize(curSt.digitalFontSize || 40);
+                setGaugeScale(curSt.gaugeScale || 240);
+            }
+
+            window.closeConfigModal();
 
             if (!isSimulation) {
                 fetchLiveApiData();
@@ -1885,30 +1955,16 @@
             }
         };
 
-        function loadSettings() {
-            const saved = localStorage.getItem('christy_ws2902_config');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.stations && Array.isArray(parsed.stations) && parsed.stations.length > 0) {
-                        config = { ...config, ...parsed };
-                    }
-                } catch (e) { console.error('Error loading config:', e); }
-            }
-            applyActiveStationPreferences();
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
+        window.onload = function() {
             initClocks();
             initCharts();
-            loadSettings();
+            applyPaneDisplayModes();
             renderAllGauges();
-            pushChartData();
-            
+            startSimulationLoop();
+
             fetchLiveApiData();
             updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
-            startSimulationLoop();
-        });
+        };
     </script>
 </body>
 </html>
