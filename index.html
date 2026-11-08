@@ -399,7 +399,7 @@
             <div class="wd-panel p-3.5">
                 <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-chart-line mr-1.5"></i> REAL-TIME WIND TELEMETRY HISTORY</span>
-                    <span class="text-xs text-slate-300 font-bold">PAST 12 HOURS</span>
+                    <span class="text-xs text-slate-300 font-bold">PAST 12 HOURS (API HISTORIC)</span>
                 </div>
                 <div class="h-48 relative">
                     <canvas id="chart-wind"></canvas>
@@ -410,7 +410,7 @@
             <div class="wd-panel p-3.5">
                 <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-chart-area mr-1.5"></i> TEMP, BARO & HUMIDITY TRENDS</span>
-                    <span class="text-xs text-slate-300 font-bold">PAST 12 HOURS</span>
+                    <span class="text-xs text-slate-300 font-bold">PAST 12 HOURS (API HISTORIC)</span>
                 </div>
                 <div class="h-48 relative">
                     <canvas id="chart-temp-baro"></canvas>
@@ -737,6 +737,7 @@
                 if (btnInhg) btnInhg.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700';
             }
             renderAllGauges();
+            updateChartsWithCurrentUnits();
         };
 
         window.setTempUnit = function(unit) {
@@ -752,6 +753,7 @@
                 if (btnF) btnF.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer hover:bg-slate-700';
             }
             renderAllGauges();
+            updateChartsWithCurrentUnits();
         };
 
         window.toggleUnits = function() {
@@ -776,6 +778,7 @@
             if (lblUnit) lblUnit.innerText = unit.toUpperCase();
 
             renderAllGauges();
+            updateChartsWithCurrentUnits();
         };
 
         window.cycleWindUnit = function() {
@@ -1484,55 +1487,21 @@
             }
         }
 
-        function generateInitialHistory() {
-            const timeLabels = [];
-            const windSpeedData = [];
-            const windGustData = [];
-            const tempData = [];
-            const baroData = [];
-            const humData = [];
-
-            const now = new Date();
-            let baseTemp = weatherData.temp || 72.4;
-            let baseBaro = currentBaroUnit === 'inhg' ? weatherData.baroInhg : weatherData.baroHpa;
-            let baseHum = weatherData.outHum || 62;
-            let baseWind = weatherData.windSpeed || 8.4;
-
-            for (let i = 143; i >= 0; i--) {
-                const pastDate = new Date(now.getTime() - i * 5 * 60 * 1000);
-                const timeStr = pastDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                timeLabels.push(timeStr);
-
-                const hoursAgo = (i * 5) / 60;
-                const tempVal = baseTemp - Math.sin(hoursAgo / 3) * 3 + (Math.random() * 0.6 - 0.3);
-                const baroVal = baseBaro + Math.cos(hoursAgo / 4) * (currentBaroUnit === 'inhg' ? 0.03 : 1.0) + (Math.random() * 0.01 - 0.005);
-                const humVal = Math.min(100, Math.max(20, baseHum + Math.sin(hoursAgo / 3) * 8 + (Math.random() * 1.5 - 0.75)));
-                const wSpd = Math.max(0, baseWind + (Math.random() * 3 - 1.5));
-                const wGst = wSpd + Math.random() * 4 + 1;
-
-                windSpeedData.push(Number(wSpd.toFixed(1)));
-                windGustData.push(Number(wGst.toFixed(1)));
-                tempData.push(Number((currentTempUnit === 'F' ? tempVal : fToC(tempVal)).toFixed(1)));
-                baroData.push(Number(baroVal.toFixed(currentBaroUnit === 'inhg' ? 2 : 1)));
-                humData.push(Number(humVal.toFixed(1)));
-            }
-
-            return { timeLabels, windSpeedData, windGustData, tempData, baroData, humData };
-        }
+        // Global storage for raw historic log items fetched from Ambient API
+        let rawHistoricLogs = [];
 
         function initCharts() {
             const chartFontFamily = "Arial, Helvetica, sans-serif";
-            const history = generateInitialHistory();
 
             const ctxWind = document.getElementById('chart-wind').getContext('2d');
             windChart = new Chart(ctxWind, {
                 type: 'line',
                 data: {
-                    labels: history.timeLabels,
+                    labels: [],
                     datasets: [
                         {
                             label: 'Speed',
-                            data: history.windSpeedData,
+                            data: [],
                             borderColor: '#00f0ff',
                             backgroundColor: 'rgba(0, 240, 255, 0.15)',
                             fill: true,
@@ -1542,7 +1511,7 @@
                         },
                         {
                             label: 'Gust',
-                            data: history.windGustData,
+                            data: [],
                             borderColor: '#ffee00',
                             borderDash: [4, 4],
                             fill: false,
@@ -1576,11 +1545,11 @@
             tempBaroChart = new Chart(ctxTemp, {
                 type: 'line',
                 data: {
-                    labels: history.timeLabels,
+                    labels: [],
                     datasets: [
                         {
                             label: 'Outdoor Temp',
-                            data: history.tempData,
+                            data: [],
                             borderColor: '#ffee00',
                             yAxisID: 'yTemp',
                             tension: 0.3,
@@ -1589,7 +1558,7 @@
                         },
                         {
                             label: 'Outdoor Humidity',
-                            data: history.humData,
+                            data: [],
                             borderColor: '#ff3355',
                             backgroundColor: 'rgba(255, 51, 85, 0.1)',
                             fill: true,
@@ -1600,7 +1569,7 @@
                         },
                         {
                             label: 'Barometer',
-                            data: history.baroData,
+                            data: [],
                             borderColor: '#00ff66',
                             yAxisID: 'yBaro',
                             tension: 0.3,
@@ -1648,6 +1617,59 @@
                     }
                 }
             });
+        }
+
+        function updateChartsWithCurrentUnits() {
+            if (!rawHistoricLogs || rawHistoricLogs.length === 0) return;
+
+            const timeLabels = [];
+            const windSpeedData = [];
+            const windGustData = [];
+            const tempData = [];
+            const baroData = [];
+            const humData = [];
+
+            rawHistoricLogs.forEach(entry => {
+                const pktDate = new Date(entry.date || entry.dateutc);
+                const timeStr = !isNaN(pktDate.getTime()) ? pktDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                timeLabels.push(timeStr);
+
+                const rawSpd = entry.windspeedmph || 0;
+                const rawGst = entry.windgustmph || rawSpd;
+                if (currentWindUnit === 'kmh') {
+                    windSpeedData.push(Number(mphToKmh(rawSpd).toFixed(1)));
+                    windGustData.push(Number(mphToKmh(rawGst).toFixed(1)));
+                } else if (currentWindUnit === 'kts') {
+                    windSpeedData.push(Number(mphToKts(rawSpd).toFixed(1)));
+                    windGustData.push(Number(mphToKts(rawGst).toFixed(1)));
+                } else {
+                    windSpeedData.push(Number(rawSpd.toFixed(1)));
+                    windGustData.push(Number(rawGst.toFixed(1)));
+                }
+
+                const rawT = entry.tempf || 72;
+                tempData.push(Number((currentTempUnit === 'F' ? rawT : fToC(rawT)).toFixed(1)));
+
+                humData.push(Number((entry.humidity || 50).toFixed(1)));
+
+                const rawB = entry.baromrelin || 29.92;
+                baroData.push(Number((currentBaroUnit === 'inhg' ? rawB : rawB * 33.8639).toFixed(currentBaroUnit === 'inhg' ? 2 : 1)));
+            });
+
+            if (windChart) {
+                windChart.data.labels = timeLabels;
+                windChart.data.datasets[0].data = windSpeedData;
+                windChart.data.datasets[1].data = windGustData;
+                windChart.update();
+            }
+
+            if (tempBaroChart) {
+                tempBaroChart.data.labels = timeLabels;
+                tempBaroChart.data.datasets[0].data = tempData;
+                tempBaroChart.data.datasets[1].data = humData;
+                tempBaroChart.data.datasets[2].data = baroData;
+                tempBaroChart.update();
+            }
         }
 
         function pushChartData() {
@@ -1826,14 +1848,39 @@
 
                 if (data && Array.isArray(data) && data.length > 0) {
                     let matchedDevice = null;
-                    if (curSt.macAddress && curSt.macAddress.trim() !== "") {
-                        const cleanTargetMac = curSt.macAddress.replace(/[:\-]/g, '').trim().toLowerCase();
+                    let targetMac = curSt.macAddress;
+                    if (!targetMac && data[0].mac) targetMac = data[0].mac;
+
+                    if (targetMac && targetMac.trim() !== "") {
+                        const cleanTargetMac = targetMac.replace(/[:\-]/g, '').trim().toLowerCase();
                         matchedDevice = data.find(dev => {
                             const rawMac = dev.mac || dev.macAddress || dev.info?.mac || "";
                             return rawMac.replace(/[:\-]/g, '').trim().toLowerCase() === cleanTargetMac;
                         });
                     }
                     if (!matchedDevice) matchedDevice = data[0];
+
+                    const activeMac = matchedDevice.mac || matchedDevice.macAddress || targetMac;
+
+                    // Fetch real historic logs directly from Ambient API historic endpoint with proxy routing
+                    if (activeMac) {
+                        try {
+                            const historicUrl = `https://rt.ambientweather.net/v1/devices/${activeMac}?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=144`;
+                            let historicResp = await fetch(historicUrl);
+                            if (!historicResp.ok) {
+                                historicResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(historicUrl)}`);
+                            }
+                            if (historicResp.ok) {
+                                const histData = await historicResp.json();
+                                if (Array.isArray(histData) && histData.length > 0) {
+                                    rawHistoricLogs = histData.reverse(); // Chronological order
+                                    updateChartsWithCurrentUnits();
+                                }
+                            }
+                        } catch (histErr) {
+                            console.warn("Historic fetch fallback warning:", histErr);
+                        }
+                    }
 
                     const lastData = matchedDevice?.lastData;
                     if (lastData) {
