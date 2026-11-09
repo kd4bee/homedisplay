@@ -137,7 +137,7 @@
         <!-- Controls / Actions -->
         <div class="flex items-center gap-2">
             <button id="toggle-sim-btn" onclick="window.toggleSimulation()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
-                <i class="fa-solid fa-flask text-amber-400"></i>
+                <i class="fa-solid fa-flask text-cyan-300"></i>
                 <span id="sim-btn-text">Demo Mode: OFF</span>
             </button>
             <button onclick="window.openConfigModal()" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-600/60 text-cyan-300 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
@@ -152,7 +152,7 @@
         <!-- TOP SECTION: 3 Equally Spaced Panes (Wind, Outdoor Temp/Hum, Indoor Temp/Hum) -->
         <section class="lg:col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-3">
             
-            <!-- Combined Wind Pane (Speed, Gust, Direction) -->
+            <!-- Combined Wind Pane (Speed, Gust, Daily Max, Direction) -->
             <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
                 <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-wind mr-1.5"></i> WIND SPEED & DIRECTION</span>
@@ -179,24 +179,29 @@
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-wind-dir" width="240" height="240" class="gauge-canvas gauge-view-wind"></canvas>
                         <div id="digital-container-wind-dir" class="hidden flex-col items-center justify-center digital-view-wind text-center">
-                            <div id="digital-wind-dir" class="font-black text-emerald-400 digital-readout-large">N (000°)</div>
+                            <div id="digital-wind-dir" class="font-black text-cyan-400 digital-readout-large">N (000°)</div>
                             <div class="text-xs text-slate-400 font-bold uppercase mt-1">DIRECTION</div>
                         </div>
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-wind">Wind Direction</span>
                     </div>
                 </div>
-                <div class="w-full grid grid-cols-3 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
+                <!-- 4 Summary Boxes: SPEED, GUST, MAX (DAY), DIRECTION -->
+                <div class="w-full grid grid-cols-4 gap-1.5 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">SPEED (<span id="lbl-wind-unit" class="lbl-wind-unit-str">MPH</span>)</div>
-                        <div id="val-wind-speed" class="text-lg md:text-xl font-bold text-cyan-400">0.0</div>
+                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">SPEED (<span id="lbl-wind-unit" class="lbl-wind-unit-str">MPH</span>)</div>
+                        <div id="val-wind-speed" class="text-base md:text-lg font-bold text-cyan-400">0.0</div>
                     </div>
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">GUST</div>
-                        <div id="val-wind-gust" class="text-lg md:text-xl font-bold text-amber-400">0.0</div>
+                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">GUST</div>
+                        <div id="val-wind-gust" class="text-base md:text-lg font-bold text-cyan-300">0.0</div>
+                    </div>
+                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
+                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">MAX (DAY)</div>
+                        <div id="val-wind-max" class="text-base md:text-lg font-bold text-amber-400">0.0</div>
                     </div>
                     <div class="cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">DIRECTION</div>
-                        <div id="val-wind-cardinal" class="text-base font-bold text-emerald-400">N (000°)</div>
+                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">DIRECTION</div>
+                        <div id="val-wind-cardinal" class="text-sm md:text-base font-bold text-cyan-400">N (000°)</div>
                     </div>
                 </div>
             </div>
@@ -219,7 +224,7 @@
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-temp" width="240" height="240" class="gauge-canvas gauge-view-outTemp"></canvas>
                         <div id="digital-container-temp" class="hidden flex-col items-center justify-center digital-view-outTemp text-center">
-                            <div id="digital-temp" class="font-black text-amber-400 digital-readout-large">72.4°F</div>
+                            <div id="digital-temp" class="font-black text-cyan-400 digital-readout-large">72.4°F</div>
                             <div class="text-xs text-slate-400 font-bold uppercase mt-1">OUTDOOR TEMP</div>
                         </div>
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-outTemp">Temperature</span>
@@ -227,7 +232,7 @@
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-out-hum" width="240" height="240" class="gauge-canvas gauge-view-outTemp"></canvas>
                         <div id="digital-container-out-hum" class="hidden flex-col items-center justify-center digital-view-outTemp text-center">
-                            <div id="digital-out-hum" class="font-black text-emerald-400 digital-readout-large">62%</div>
+                            <div id="digital-out-hum" class="font-black text-cyan-400 digital-readout-large">62%</div>
                             <div class="text-xs text-slate-400 font-bold uppercase mt-1">OUTDOOR HUMIDITY</div>
                         </div>
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-outTemp">Humidity</span>
@@ -236,7 +241,7 @@
                 <div class="w-full grid grid-cols-3 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.toggleUnits()">
                         <div class="text-[11px] text-slate-300 font-bold uppercase">TEMP</div>
-                        <div id="val-temp" class="text-base md:text-lg font-bold text-amber-400 glow-yellow">72.4°</div>
+                        <div id="val-temp" class="text-base md:text-lg font-bold text-cyan-400 glow-yellow">72.4°</div>
                     </div>
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition">
                         <div class="text-[11px] text-slate-300 font-bold uppercase">FEELS / DEW</div>
@@ -244,7 +249,7 @@
                     </div>
                     <div class="cursor-pointer hover:bg-slate-800/50 rounded transition">
                         <div class="text-[11px] text-slate-300 font-bold uppercase">HUM</div>
-                        <div id="val-out-humidity-digital" class="text-base md:text-lg font-bold text-emerald-400">62%</div>
+                        <div id="val-out-humidity-digital" class="text-base md:text-lg font-bold text-cyan-400">62%</div>
                     </div>
                 </div>
             </div>
@@ -264,7 +269,7 @@
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-in-temp" width="240" height="240" class="gauge-canvas gauge-view-inTemp"></canvas>
                         <div id="digital-container-in-temp" class="hidden flex-col items-center justify-center digital-view-inTemp text-center">
-                            <div id="digital-in-temp" class="font-black text-cyan-300 digital-readout-large">71.2°F</div>
+                            <div id="digital-in-temp" class="font-black text-cyan-400 digital-readout-large">71.2°F</div>
                             <div class="text-xs text-slate-400 font-bold uppercase mt-1">INDOOR TEMP</div>
                         </div>
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-inTemp">Indoor Temp</span>
@@ -272,7 +277,7 @@
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-in-hum" width="240" height="240" class="gauge-canvas gauge-view-inTemp"></canvas>
                         <div id="digital-container-in-hum" class="hidden flex-col items-center justify-center digital-view-inTemp text-center">
-                            <div id="digital-in-hum" class="font-black text-teal-300 digital-readout-large">45%</div>
+                            <div id="digital-in-hum" class="font-black text-cyan-400 digital-readout-large">45%</div>
                             <div class="text-xs text-slate-400 font-bold uppercase mt-1">INDOOR HUMIDITY</div>
                         </div>
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-inTemp">Indoor Hum</span>
@@ -281,11 +286,11 @@
                 <div class="w-full grid grid-cols-2 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
                     <div class="border-r border-slate-800">
                         <div class="text-[11px] text-slate-300 font-bold uppercase">INDOOR TEMP</div>
-                        <div id="val-in-temp" class="text-base md:text-lg font-bold text-cyan-300">71.2°F</div>
+                        <div id="val-in-temp" class="text-base md:text-lg font-bold text-cyan-400">71.2°F</div>
                     </div>
                     <div>
                         <div class="text-[11px] text-slate-300 font-bold uppercase">INDOOR HUMIDITY</div>
-                        <div id="val-in-hum" class="text-base md:text-lg font-bold text-teal-300">45%</div>
+                        <div id="val-in-hum" class="text-base md:text-lg font-bold text-cyan-400">45%</div>
                     </div>
                 </div>
             </div>
@@ -312,14 +317,14 @@
                 <div class="relative w-full flex justify-center items-center py-1 min-h-[200px]">
                     <canvas id="gauge-baro" width="240" height="240" class="gauge-canvas gauge-view-baro"></canvas>
                     <div id="digital-container-baro" class="hidden flex-col items-center justify-center digital-view-baro text-center py-6">
-                        <div id="digital-baro" class="font-black text-emerald-400 digital-readout-large">1013.2 hPa</div>
+                        <div id="digital-baro" class="font-black text-cyan-400 digital-readout-large">1013.2 hPa</div>
                         <div class="text-xs text-slate-400 font-bold uppercase mt-1">BAROMETRIC PRESSURE</div>
                     </div>
                 </div>
                 <div class="w-full grid grid-cols-2 gap-1.5 mt-1 text-center bg-slate-900/70 p-2 rounded-lg border border-slate-800">
                     <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.setBaroUnit('hpa')">
                         <div class="text-xs text-slate-300 font-bold uppercase">HPA / MB</div>
-                        <div id="val-baro-hpa" class="text-base font-bold text-emerald-400">1013.2</div>
+                        <div id="val-baro-hpa" class="text-base font-bold text-cyan-400">1013.2</div>
                     </div>
                     <div class="cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.setBaroUnit('inhg')">
                         <div class="text-xs text-slate-300 font-bold uppercase">INHG</div>
@@ -367,11 +372,11 @@
                     <div class="space-y-2">
                         <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
                             <div class="text-[11px] text-slate-300 font-bold">SOLAR RADIATION</div>
-                            <div id="val-solar" class="text-base font-bold text-amber-300">485 W/m²</div>
+                            <div id="val-solar" class="text-base font-bold text-cyan-400">485 W/m²</div>
                         </div>
                         <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
                             <div class="text-[11px] text-slate-300 font-bold">UV INDEX</div>
-                            <div id="val-uv" class="text-base font-bold text-emerald-400">3 (MOD)</div>
+                            <div id="val-uv" class="text-base font-bold text-cyan-400">3 (MOD)</div>
                         </div>
                     </div>
                 </div>
@@ -399,18 +404,23 @@
             <div class="wd-panel p-3.5">
                 <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-chart-line mr-1.5"></i> REAL-TIME WIND TELEMETRY HISTORY</span>
-                    <span class="text-xs text-slate-300 font-bold">PAST 12 HOURS (API HISTORIC)</span>
+                    <span class="text-xs text-slate-300 font-bold">PAST 8 HOURS (API HISTORIC)</span>
                 </div>
                 <div class="h-48 relative">
                     <canvas id="chart-wind"></canvas>
                 </div>
             </div>
 
-            <!-- Temperature, Barometer & Outdoor Humidity Graph -->
+            <!-- Temperature, Barometer & Outdoor Humidity Graph (with Sync 8H History Button) -->
             <div class="wd-panel p-3.5">
                 <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-chart-area mr-1.5"></i> TEMP, BARO & HUMIDITY TRENDS</span>
-                    <span class="text-xs text-slate-300 font-bold">PAST 12 HOURS (API HISTORIC)</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-300 font-bold hidden sm:inline">PAST 8 HOURS</span>
+                        <button onclick="window.forceFetchStation8HourHistory()" title="Fetch Past 8 Hours History (WS-2902)" class="text-[11px] text-cyan-300 hover:text-white bg-cyan-950/90 hover:bg-cyan-900 px-2 py-0.5 rounded border border-cyan-700/60 transition flex items-center gap-1 cursor-pointer font-bold shadow-inner">
+                            <i class="fa-solid fa-cloud-arrow-down text-[10px]"></i> Sync 8H History
+                        </button>
+                    </div>
                 </div>
                 <div class="h-48 relative">
                     <canvas id="chart-temp-baro"></canvas>
@@ -472,6 +482,13 @@
                     <div>
                         <label class="block text-slate-300 mb-1">APPLICATION KEY (OPTIONAL)</label>
                         <input type="text" id="setting-app-key" placeholder="Enter Ambient Weather Application Key" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                    </div>
+
+                    <!-- Force Fetch 8-Hour History Button for Current Station -->
+                    <div class="pt-1">
+                        <button type="button" onclick="window.forceFetchStation8HourHistory()" class="w-full bg-cyan-950 hover:bg-cyan-900 border border-cyan-600 text-cyan-300 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Force Fetch 8-Hour History (WS-2902)
+                        </button>
                     </div>
 
                     <!-- Unit Preferences & Refresh Interval selectors -->
@@ -585,7 +602,21 @@
         let tempBaroChart = null;
         let rainBarChart = null;
         
-        const maxChartHistory = 144;
+        const maxChartHistory = 16; // 8 hours at 30-minute intervals
+        let lastChartUpdateTime = 0;
+        const chartUpdateIntervalMs = 30 * 60 * 1000; // 30 minutes
+
+        function cleanNumber(val) {
+            if (typeof val === 'string') {
+                return parseFloat(val.replace(/,/g, '')) || 0;
+            }
+            return val || 0;
+        }
+
+        function formatNoComma(num, decimals = 1) {
+            const clean = cleanNumber(num);
+            return clean.toFixed(decimals);
+        }
 
         let config = {
             stations: [
@@ -635,9 +666,39 @@
             activeStationIndex: 0
         };
 
+        // Load saved preferences from localStorage on startup
+        function loadPersistedPreferences() {
+            try {
+                const savedConfig = localStorage.getItem('christy_wx_config');
+                if (savedConfig) {
+                    const parsed = JSON.parse(savedConfig);
+                    if (parsed.stations) config.stations = parsed.stations;
+                    if (typeof parsed.activeStationIndex === 'number') config.activeStationIndex = parsed.activeStationIndex;
+                }
+
+                const savedPaneModes = localStorage.getItem('christy_wx_pane_modes');
+                if (savedPaneModes) {
+                    paneModes = JSON.parse(savedPaneModes);
+                }
+            } catch (e) {
+                console.warn("Could not load local storage preferences", e);
+            }
+        }
+
+        // Save preferences to localStorage
+        function savePersistedPreferences() {
+            try {
+                localStorage.setItem('christy_wx_config', JSON.stringify(config));
+                localStorage.setItem('christy_wx_pane_modes', JSON.stringify(paneModes));
+            } catch (e) {
+                console.warn("Could not save local storage preferences", e);
+            }
+        }
+
         window.togglePaneDisplay = function(paneKey) {
             paneModes[paneKey] = paneModes[paneKey] === 'gauge' ? 'digital' : 'gauge';
             applyPaneDisplayModes();
+            savePersistedPreferences();
         };
 
         function applyPaneDisplayModes() {
@@ -796,7 +857,7 @@
             if (rate <= 0) return { label: 'NO RAIN', color: 'text-slate-400', bg: 'bg-slate-800', barColor: 'bg-slate-700', pct: 0 };
             if (rate < 0.1) return { label: 'LIGHT DRIZZLE', color: 'text-cyan-300', bg: 'bg-cyan-950', barColor: 'bg-cyan-400', pct: 25 };
             if (rate < 0.3) return { label: 'MODERATE RAIN', color: 'text-emerald-400', bg: 'bg-emerald-950', barColor: 'bg-emerald-400', pct: 50 };
-            if (rate < 0.5) return { label: 'HEAVY RAIN', color: 'text-amber-400', bg: 'bg-amber-950', barColor: 'bg-amber-400', pct: 75 };
+            if (rate < 0.5) return { label: 'HEAVY RAIN', color: 'text-cyan-300', bg: 'bg-cyan-950', barColor: 'bg-cyan-400', pct: 75 };
             return { label: 'TORRENTIAL DOWNPOUR', color: 'text-rose-400', bg: 'bg-rose-950', barColor: 'bg-rose-500', pct: 100 };
         }
 
@@ -883,7 +944,7 @@
                         </div>
                         <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                             <div class="text-[10px] text-slate-400 font-bold">YEARLY</div>
-                            <div class="text-xs font-bold text-emerald-400">${(weatherData.rainYearly * rMult).toFixed(2)} ${rUnitStr}</div>
+                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainYearly * rMult).toFixed(2)} ${rUnitStr}</div>
                         </div>
                     </div>
                 `;
@@ -920,11 +981,11 @@
                         <div class="grid grid-cols-2 gap-2 text-center">
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase">LAST RAIN EVENT</div>
-                                <div class="text-sm font-bold text-amber-300">${lastRainDisplay}</div>
+                                <div class="text-sm font-bold text-cyan-300">${lastRainDisplay}</div>
                             </div>
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
                                 <div class="text-[10px] text-slate-400 font-bold uppercase">DRY STREAK</div>
-                                <div class="text-sm font-bold text-emerald-400">${computedDryStreakDays} Days Dry</div>
+                                <div class="text-sm font-bold text-cyan-300">${computedDryStreakDays} Days Dry</div>
                             </div>
                         </div>
                     </div>
@@ -1127,12 +1188,12 @@
                     const textR = radius - Math.max(16, Math.round(w * 0.085));
                     const tx = cx + Math.cos(angle) * textR;
                     const ty = cy + Math.sin(angle) * textR;
-                    const displayTick = options.decimals ? tickVal.toFixed(options.decimals) : Math.round(tickVal);
+                    const displayTick = options.decimals ? formatNoComma(tickVal, options.decimals) : Math.round(cleanNumber(tickVal));
                     ctx.fillText(displayTick, tx, ty);
                 }
             }
 
-            const clampedVal = Math.min(Math.max(value, min), max);
+            const clampedVal = Math.min(Math.max(cleanNumber(value), min), max);
             const valAngle = startAngle + ((clampedVal - min) / (max - min)) * totalAngle;
 
             ctx.save();
@@ -1159,7 +1220,7 @@
             ctx.font = `bold ${dialValueFontSize}px Arial, Helvetica, sans-serif`;
             const valDecs = options.valDecimals !== undefined ? options.valDecimals : 1;
             const yOffset = options.digitalYOffset !== undefined ? options.digitalYOffset : 0.30;
-            ctx.fillText(value.toFixed(valDecs) + (unit ? ' ' + unit : ''), cx, cy + radius * yOffset);
+            ctx.fillText(formatNoComma(value, valDecs) + (unit ? ' ' + unit : ''), cx, cy + radius * yOffset);
         }
 
         function drawCompassDial(canvasId, degrees, avgDegrees) {
@@ -1335,7 +1396,7 @@
                     { from: currentTempUnit === 'F' ? 32 : 0, to: currentTempUnit === 'F' ? 85 : 29, color: '#00ff66' },
                     { from: currentTempUnit === 'F' ? 85 : 29, to: maxTemp, color: '#ff3355' }
                 ],
-                { needleColor: '#ffee00', tickCount: 5 }
+                { needleColor: '#00f0ff', tickCount: 5 }
             );
 
             drawGaugeDial(
@@ -1348,7 +1409,7 @@
                     { from: 30, to: 70, color: '#00ff66' },
                     { from: 70, to: 100, color: '#00f0ff' }
                 ],
-                { needleColor: '#00ff66', tickCount: 5 }
+                { needleColor: '#00f0ff', tickCount: 5 }
             );
 
             const displayInTemp = currentTempUnit === 'F' ? weatherData.inTemp : fToC(weatherData.inTemp);
@@ -1375,7 +1436,7 @@
                     { from: 30, to: 65, color: '#00ff66' },
                     { from: 65, to: 100, color: '#ff3355' }
                 ],
-                { needleColor: '#14b8a6', tickCount: 5 }
+                { needleColor: '#00f0ff', tickCount: 5 }
             );
 
             if (currentBaroUnit === 'inhg') {
@@ -1389,7 +1450,7 @@
                         { from: 29.8, to: 30.2, color: '#00ff66' },
                         { from: 30.2, to: 31.5, color: '#00f0ff' }
                     ],
-                    { needleColor: '#00ff66', tickCount: 6, valDecimals: 2, digitalYOffset: 0.30 }
+                    { needleColor: '#00f0ff', tickCount: 6, valDecimals: 2, digitalYOffset: 0.30 }
                 );
             } else {
                 drawGaugeDial(
@@ -1402,7 +1463,7 @@
                         { from: 1008, to: 1022, color: '#00ff66' },
                         { from: 1022, to: 1065, color: '#00f0ff' }
                     ],
-                    { needleColor: '#00ff66', tickCount: 5, valDecimals: 1, digitalYOffset: 0.30 }
+                    { needleColor: '#00f0ff', tickCount: 5, valDecimals: 1, digitalYOffset: 0.30 }
                 );
             }
 
@@ -1411,6 +1472,9 @@
 
             const elWindGust = document.getElementById('val-wind-gust');
             if (elWindGust) elWindGust.innerText = displayWindGust.toFixed(1);
+
+            const elWindMax = document.getElementById('val-wind-max');
+            if (elWindMax) elWindMax.innerText = displayWindMax.toFixed(1);
 
             const elWindCardinal = document.getElementById('val-wind-cardinal');
             if (elWindCardinal) elWindCardinal.innerText = `${degToCardinal(weatherData.windDeg)} (${String(Math.round(weatherData.windDeg)).padStart(3, '0')}°)`;
@@ -1425,10 +1489,10 @@
             if (elOutHum) elOutHum.innerText = `${weatherData.outHum}%`;
 
             const elBaroInhg = document.getElementById('val-baro-inhg');
-            if (elBaroInhg) elBaroInhg.innerText = weatherData.baroInhg.toFixed(2);
+            if (elBaroInhg) elBaroInhg.innerText = formatNoComma(weatherData.baroInhg, 2);
 
             const elBaroHpa = document.getElementById('val-baro-hpa');
-            if (elBaroHpa) elBaroHpa.innerText = weatherData.baroHpa.toFixed(1);
+            if (elBaroHpa) elBaroHpa.innerText = formatNoComma(weatherData.baroHpa, 1);
 
             const rMult = currentRainUnit === 'mm' ? 25.4 : 1;
             const rUnitStr = currentRainUnit === 'mm' ? 'mm' : 'in';
@@ -1471,8 +1535,8 @@
 
             const digBaro = document.getElementById('digital-baro');
             if (digBaro) {
-                if (currentBaroUnit === 'inhg') digBaro.innerText = `${weatherData.baroInhg.toFixed(2)} inHg`;
-                else digBaro.innerText = `${weatherData.baroHpa.toFixed(1)} hPa`;
+                if (currentBaroUnit === 'inhg') digBaro.innerText = `${formatNoComma(weatherData.baroInhg, 2)} inHg`;
+                else digBaro.innerText = `${formatNoComma(weatherData.baroHpa, 1)} hPa`;
             }
 
             renderRainView();
@@ -1609,19 +1673,60 @@
                         yBaro: { 
                             position: 'right', 
                             grid: { drawOnChartArea: false }, 
-                            ticks: { color: '#00ff66', font: { family: chartFontFamily, size: 10, weight: 'bold' } } 
+                            ticks: { 
+                                color: '#00ff66', 
+                                font: { family: chartFontFamily, size: 10, weight: 'bold' },
+                                callback: function(val) { return formatNoComma(val, currentBaroUnit === 'inhg' ? 2 : 1); }
+                            } 
                         }
                     },
                     plugins: {
-                        legend: { labels: { color: '#e2e8f0', font: { family: chartFontFamily, size: 11, weight: 'bold' } } }
+                        legend: { labels: { color: '#e2e8f0', font: { family: chartFontFamily, size: 11, weight: 'bold' } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        if (context.dataset.yAxisID === 'yBaro') {
+                                            label += formatNoComma(context.parsed.y, currentBaroUnit === 'inhg' ? 2 : 1) + (currentBaroUnit === 'inhg' ? ' inHg' : ' hPa');
+                                        } else {
+                                            label += context.parsed.y;
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
                     }
                 }
             });
         }
 
+        function processHistoricLogsFor8Hours30Min(logs) {
+            const now = Date.now();
+            const eightHoursAgo = now - (8 * 60 * 60 * 1000);
+            const recentLogs = logs.filter(entry => {
+                const t = new Date(entry.date || entry.dateutc).getTime();
+                return !isNaN(t) && t >= eightHoursAgo && t <= now;
+            });
+            
+            const sampled = [];
+            let lastTimeMark = 0;
+            recentLogs.forEach(entry => {
+                const t = new Date(entry.date || entry.dateutc).getTime();
+                if (sampled.length === 0 || (t - lastTimeMark) >= (28 * 60 * 1000)) {
+                    sampled.push(entry);
+                    lastTimeMark = t;
+                }
+            });
+            return sampled.slice(-maxChartHistory);
+        }
+
         function updateChartsWithCurrentUnits() {
             if (!rawHistoricLogs || rawHistoricLogs.length === 0) return;
 
+            const filteredLogs = processHistoricLogsFor8Hours30Min(rawHistoricLogs);
             const timeLabels = [];
             const windSpeedData = [];
             const windGustData = [];
@@ -1629,7 +1734,7 @@
             const baroData = [];
             const humData = [];
 
-            rawHistoricLogs.forEach(entry => {
+            filteredLogs.forEach(entry => {
                 const pktDate = new Date(entry.date || entry.dateutc);
                 const timeStr = !isNaN(pktDate.getTime()) ? pktDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                 timeLabels.push(timeStr);
@@ -1652,7 +1757,7 @@
 
                 humData.push(Number((entry.humidity || 50).toFixed(1)));
 
-                const rawB = entry.baromrelin || 29.92;
+                const rawB = cleanNumber(entry.baromrelin || 29.92);
                 baroData.push(Number((currentBaroUnit === 'inhg' ? rawB : rawB * 33.8639).toFixed(currentBaroUnit === 'inhg' ? 2 : 1)));
             });
 
@@ -1711,6 +1816,14 @@
             }
         }
 
+        function maybePushChartData() {
+            const now = Date.now();
+            if (lastChartUpdateTime === 0 || (now - lastChartUpdateTime) >= chartUpdateIntervalMs) {
+                pushChartData();
+                lastChartUpdateTime = now;
+            }
+        }
+
         function startSimulationLoop() {
             setInterval(() => {
                 if (!isSimulation) return;
@@ -1728,11 +1841,53 @@
                 weatherData.baroHpa = weatherData.baroInhg * 33.8639;
 
                 renderAllGauges();
-                pushChartData();
+                maybePushChartData();
                 const lastTime = document.getElementById('last-update-time');
                 if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
             }, 3000);
         }
+
+        window.forceFetchStation8HourHistory = async function() {
+            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+            if (!curSt || !curSt.apiKey || !curSt.appKey) {
+                alert("Please configure an Ambient API Key and Application Key first.");
+                return;
+            }
+
+            let targetMac = curSt.macAddress;
+            try {
+                if (!targetMac) {
+                    const devUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=1`;
+                    let devResp = await fetch(devUrl);
+                    if (!devResp.ok) devResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(devUrl)}`);
+                    if (devResp.ok) {
+                        const devData = await devResp.json();
+                        if (Array.isArray(devData) && devData.length > 0) {
+                            targetMac = devData[0].mac || devData[0].macAddress;
+                        }
+                    }
+                }
+
+                if (targetMac) {
+                    const historicUrl = `https://rt.ambientweather.net/v1/devices/${targetMac}?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=96`;
+                    let historicResp = await fetch(historicUrl);
+                    if (!historicResp.ok) {
+                        historicResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(historicUrl)}`);
+                    }
+                    if (historicResp.ok) {
+                        const histData = await historicResp.json();
+                        if (Array.isArray(histData) && histData.length > 0) {
+                            rawHistoricLogs = histData.reverse();
+                            updateChartsWithCurrentUnits();
+                            const lastTime = document.getElementById('last-update-time');
+                            if (lastTime) lastTime.innerText = '8H HISTORY SYNCED: ' + new Date().toLocaleTimeString();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to force fetch 8H history", e);
+            }
+        };
 
         async function fetchLocationLiveWeather(locQuery) {
             const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locQuery)}`);
@@ -1764,16 +1919,17 @@
                 weatherData.windAvgDeg = cur.wind_direction_10m || 0;
 
                 weatherData.outHum = cur.relative_humidity_2m;
-                weatherData.baroInhg = (cur.surface_pressure ? cur.surface_pressure / 33.8639 : 29.92);
-                weatherData.baroHpa = cur.surface_pressure || 1013.2;
+                const rawSp = cleanNumber(cur.surface_pressure);
+                weatherData.baroInhg = (rawSp ? rawSp / 33.8639 : 29.92);
+                weatherData.baroHpa = rawSp || 1013.2;
                 weatherData.rainRate = cur.precipitation || 0;
 
                 if (wData.hourly && wData.hourly.time) {
-                    const times = wData.hourly.time.slice(-12);
-                    const temps = wData.hourly.temperature_2m.slice(-12);
-                    const hums = wData.hourly.relative_humidity_2m.slice(-12);
-                    const baros = wData.hourly.surface_pressure.slice(-12);
-                    const winds = wData.hourly.wind_speed_10m.slice(-12);
+                    const times = wData.hourly.time.slice(-16);
+                    const temps = wData.hourly.temperature_2m.slice(-16);
+                    const hums = wData.hourly.relative_humidity_2m.slice(-16);
+                    const baros = wData.hourly.surface_pressure.slice(-16);
+                    const winds = wData.hourly.wind_speed_10m.slice(-16);
 
                     const timeLabels = times.map(t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
@@ -1781,7 +1937,10 @@
                         tempBaroChart.data.labels = timeLabels;
                         tempBaroChart.data.datasets[0].data = temps.map(t => currentTempUnit === 'F' ? t : fToC(t));
                         tempBaroChart.data.datasets[1].data = hums;
-                        tempBaroChart.data.datasets[2].data = baros.map(b => currentBaroUnit === 'inhg' ? b / 33.8639 : b);
+                        tempBaroChart.data.datasets[2].data = baros.map(b => {
+                            const rb = cleanNumber(b);
+                            return currentBaroUnit === 'inhg' ? rb / 33.8639 : rb;
+                        });
                         tempBaroChart.update();
                     }
 
@@ -1865,7 +2024,7 @@
                     // Fetch real historic logs directly from Ambient API historic endpoint with proxy routing
                     if (activeMac) {
                         try {
-                            const historicUrl = `https://rt.ambientweather.net/v1/devices/${activeMac}?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=144`;
+                            const historicUrl = `https://rt.ambientweather.net/v1/devices/${activeMac}?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=96`;
                             let historicResp = await fetch(historicUrl);
                             if (!historicResp.ok) {
                                 historicResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(historicUrl)}`);
@@ -1894,8 +2053,8 @@
                         weatherData.feels = lastData.feelsLike || lastData.tempf || 0;
                         weatherData.dew = lastData.dewPoint || 0;
 
-                        weatherData.baroInhg = lastData.baromrelin || 29.92;
-                        weatherData.baroHpa = lastData.baroHpa || (weatherData.baroInhg * 33.8639);
+                        weatherData.baroInhg = cleanNumber(lastData.baromrelin || 29.92);
+                        weatherData.baroHpa = cleanNumber(lastData.baroHpa || (weatherData.baroInhg * 33.8639));
 
                         weatherData.rainRate = lastData.hourlyrainin || 0;
                         weatherData.rainEvent = lastData.eventrainin || 0;
@@ -1925,7 +2084,7 @@
                         weatherData.outHum = lastData.humidity || 0;
 
                         renderAllGauges();
-                        pushChartData();
+                        maybePushChartData();
                         if (statusText) statusText.innerText = 'Ambient API (Live)';
                         if (statusLed) statusLed.className = 'led-indicator led-green';
                         const lastTime = document.getElementById('last-update-time');
@@ -1988,6 +2147,7 @@
             config.activeStationIndex = newIndex;
             populateStationDropdown();
             loadActiveStationIntoForm();
+            savePersistedPreferences();
         };
 
         window.onStationDropdownChange = function() {
@@ -1997,6 +2157,7 @@
                 config.activeStationIndex = parseInt(selectEl.value);
                 loadActiveStationIntoForm();
             }
+            savePersistedPreferences();
         };
 
         window.deleteCurrentStation = function() {
@@ -2007,6 +2168,7 @@
             config.activeStationIndex = Math.max(0, config.activeStationIndex - 1);
             populateStationDropdown();
             loadActiveStationIntoForm();
+            savePersistedPreferences();
         };
 
         function populateStationDropdown() {
@@ -2099,6 +2261,7 @@
                 setGaugeScale(curSt.gaugeScale || 240);
             }
 
+            savePersistedPreferences();
             window.closeConfigModal();
 
             if (!isSimulation) {
@@ -2109,6 +2272,18 @@
         };
 
         window.onload = function() {
+            loadPersistedPreferences();
+            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+            if (curSt) {
+                currentTempUnit = curSt.tempUnit || 'F';
+                currentBaroUnit = curSt.baroUnit || 'hpa';
+                currentWindUnit = curSt.windUnit || 'mph';
+                currentRainUnit = curSt.rainUnit || 'in';
+                refreshIntervalMs = curSt.refreshInterval || 15000;
+                setDigitalFontSize(curSt.digitalFontSize || 40);
+                setGaugeScale(curSt.gaugeScale || 240);
+            }
+
             initClocks();
             initCharts();
             applyPaneDisplayModes();
