@@ -1331,9 +1331,10 @@
             ctx.translate(cx, cy);
             ctx.rotate(needleRad);
             ctx.beginPath();
-            ctx.moveTo(0, -radius + 26);
-            ctx.lineTo(8, 0);
-            ctx.lineTo(-8, 0);
+            // Arrow pointing inwards towards center (0,0) from the origin direction ring
+            ctx.moveTo(0, -radius + 34); 
+            ctx.lineTo(8, -radius + 12);
+            ctx.lineTo(-8, -radius + 12);
             ctx.closePath();
             ctx.fillStyle = '#00f0ff';
             ctx.fill();
