@@ -1850,7 +1850,6 @@
         window.forceFetchStation8HourHistory = async function() {
             const curSt = config.stations[config.activeStationIndex] || config.stations[0];
             if (!curSt || !curSt.apiKey || !curSt.appKey) {
-                alert("Please configure an Ambient API Key and Application Key first.");
                 return;
             }
 
@@ -1885,7 +1884,7 @@
                     }
                 }
             } catch (e) {
-                console.warn("Failed to force fetch 8H history", e);
+                console.warn("Failed to fetch 8H history", e);
             }
         };
 
@@ -2148,6 +2147,7 @@
             populateStationDropdown();
             loadActiveStationIntoForm();
             savePersistedPreferences();
+            window.forceFetchStation8HourHistory();
         };
 
         window.onStationDropdownChange = function() {
@@ -2156,6 +2156,7 @@
             if (selectEl) {
                 config.activeStationIndex = parseInt(selectEl.value);
                 loadActiveStationIntoForm();
+                window.forceFetchStation8HourHistory();
             }
             savePersistedPreferences();
         };
@@ -2169,6 +2170,7 @@
             populateStationDropdown();
             loadActiveStationIntoForm();
             savePersistedPreferences();
+            window.forceFetchStation8HourHistory();
         };
 
         function populateStationDropdown() {
@@ -2266,6 +2268,7 @@
 
             if (!isSimulation) {
                 fetchLiveApiData();
+                window.forceFetchStation8HourHistory();
                 if (updateInterval) clearInterval(updateInterval);
                 updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
             }
@@ -2291,6 +2294,7 @@
             startSimulationLoop();
 
             fetchLiveApiData();
+            window.forceFetchStation8HourHistory();
             updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
         };
     </script>
