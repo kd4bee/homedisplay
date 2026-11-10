@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Christy's Weather Station - WS-2902 Live Monitor</title>
 
-    <!-- PWA Manifest & Web App Icons -->
+    <!-- Robust PWA Manifest & External Icon Links for Android/iOS Home Screen Shortcuts -->
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
     <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Christy\'s Weather Station","short_name":"Christy WX","start_url":".","display":"standalone","background_color":"%230e131d","theme_color":"%230e131d","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1163/1163624.png","sizes":"512x512","type":"image/png"}]}'>
@@ -569,8 +569,32 @@
         </div>
     </div>
 
-    <!-- APPLICATION LOGIC -->
+    <!-- APPLICATION LOGIC & SERVICE WORKER -->
     <script>
+        // Register Service Worker inline via Blob Data-URL for true single-file PWA support
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', (e) => {
+                    self.skipWaiting();
+                });
+                self.addEventListener('activate', (e) => {
+                    e.waitUntil(clients.claim());
+                });
+                self.addEventListener('fetch', (e) => {
+                    e.respondWith(
+                        caches.match(e.request).then((cachedResponse) => {
+                            return cachedResponse || fetch(e.request).catch(() => {});
+                        })
+                    );
+                });
+            `;
+            const swBlob = new Blob([swCode], { type: 'text/javascript' });
+            const swUrl = URL.createObjectURL(swBlob);
+            navigator.serviceWorker.register(swUrl).catch(err => {
+                console.warn("Service worker registration failed:", err);
+            });
+        }
+
         let timeOffsetMs = 0;
         let refreshIntervalMs = 16000;
         let isSimulation = false;
