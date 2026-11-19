@@ -48,6 +48,13 @@
             border-radius: 8px;
         }
 
+        .wd-alert-panel {
+            background: linear-gradient(145deg, rgba(69, 10, 10, 0.92), rgba(38, 8, 15, 0.95));
+            border: 2px solid rgba(255, 51, 85, 0.7);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08), 0 6px 18px rgba(255, 51, 85, 0.22);
+            border-radius: 8px;
+        }
+
         .wd-header-bar {
             background: linear-gradient(180deg, #2a3a5c, #1a243a);
             border-bottom: 1px solid #3b4f7a;
@@ -147,13 +154,36 @@
         </div>
     </header>
 
+    <!-- DEDICATED NWS SEVERE WEATHER ALERT PANE (Appears only when active) -->
+    <div id="nwsAlertPane" class="hidden wd-alert-panel mb-3 p-2.5 md:px-4 md:py-2.5 relative overflow-hidden">
+        <button type="button" onclick="window.openNwsAlertModal(0)" class="w-full text-left flex items-center gap-3 text-rose-100 hover:text-white transition group cursor-pointer">
+            <div class="w-8 h-8 rounded-lg bg-rose-500/25 flex items-center justify-center text-rose-400 shrink-0 border border-rose-500/50 animate-pulse">
+                <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+            </div>
+            <div class="min-w-0 flex-1 overflow-hidden">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-[10px] md:text-xs uppercase font-black text-rose-400 tracking-wider" id="nwsAlertBannerLabel">Active NWS Weather Alert • Tap for Details</span>
+                    <span id="nwsAlertCountBadge" class="hidden text-[10px] font-black bg-rose-600 text-white px-2 py-0.5 rounded">1</span>
+                </div>
+                <div class="w-full overflow-hidden whitespace-nowrap mt-0.5">
+                    <marquee scrollamount="4" class="text-xs md:text-sm font-bold text-rose-100 block">
+                        <span id="nwsAlertTitle">Severe Weather Warning Issued</span>
+                    </marquee>
+                </div>
+            </div>
+            <div class="text-xs text-rose-300 font-bold shrink-0 pl-1 group-hover:translate-x-0.5 transition flex items-center gap-1">
+                <span class="hidden sm:inline text-[11px] uppercase">Details</span> &rarr;
+            </div>
+        </button>
+    </div>
+
     <!-- MAIN DASHBOARD GRID -->
     <main class="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-grow">
 
         <!-- TOP SECTION: 3 Equally Spaced Panes (Wind, Outdoor Temp/Hum, Indoor Temp/Hum) -->
         <section class="lg:col-span-12 grid grid-cols-1 lg:grid-cols-3 gap-3">
             
-            <!-- Combined Wind Pane (Speed, Gust, Daily Max, Direction) -->
+            <!-- Combined Wind Pane (Speed & Direction) -->
             <div class="wd-panel p-4 flex flex-col justify-between items-center relative">
                 <div class="w-full wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-wind mr-1.5"></i> WIND SPEED & DIRECTION</span>
@@ -168,7 +198,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
+                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center my-auto">
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-wind-speed" width="240" height="240" class="gauge-canvas gauge-view-wind"></canvas>
                         <div id="digital-container-wind-speed" class="hidden flex-col items-center justify-center digital-view-wind text-center">
@@ -186,23 +216,18 @@
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-wind">Wind Direction</span>
                     </div>
                 </div>
-                <!-- 4 Summary Boxes: SPEED, GUST, MAX (DAY), DIRECTION -->
-                <div class="w-full grid grid-cols-4 gap-1.5 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
-                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">SPEED (<span id="lbl-wind-unit" class="lbl-wind-unit-str">MPH</span>)</div>
-                        <div id="val-wind-speed" class="text-base md:text-lg font-bold text-cyan-400">0.0</div>
+                <div class="w-full grid grid-cols-3 gap-2 text-center border-t border-slate-800/80 pt-2.5 mt-2">
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">GUST</div>
+                        <div id="val-gust" class="text-sm font-bold text-cyan-300">12.1 MPH</div>
                     </div>
-                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">GUST</div>
-                        <div id="val-wind-gust" class="text-base md:text-lg font-bold text-cyan-300">0.0</div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">MAX</div>
+                        <div id="val-wind-max" class="text-sm font-bold text-cyan-300">18.5 MPH</div>
                     </div>
-                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">MAX (DAY)</div>
-                        <div id="val-wind-max" class="text-base md:text-lg font-bold text-cyan-400">0.0</div>
-                    </div>
-                    <div class="cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.cycleWindUnit()">
-                        <div class="text-[10px] md:text-[11px] text-slate-300 font-bold uppercase">DIRECTION</div>
-                        <div id="val-wind-cardinal" class="text-sm md:text-base font-bold text-cyan-400">N (000°)</div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">AVG DIR</div>
+                        <div id="val-wind-avg-dir" class="text-sm font-bold text-cyan-300">NNE</div>
                     </div>
                 </div>
             </div>
@@ -221,7 +246,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
+                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center my-auto">
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-temp" width="240" height="240" class="gauge-canvas gauge-view-outTemp"></canvas>
                         <div id="digital-container-temp" class="hidden flex-col items-center justify-center digital-view-outTemp text-center">
@@ -239,18 +264,18 @@
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-outTemp">Humidity</span>
                     </div>
                 </div>
-                <div class="w-full grid grid-cols-3 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
-                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.toggleUnits()">
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">TEMP</div>
-                        <div id="val-temp" class="text-base md:text-lg font-bold text-cyan-400 glow-yellow">72.4°</div>
+                <div class="w-full grid grid-cols-3 gap-2 text-center border-t border-slate-800/80 pt-2.5 mt-2">
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">FEELS LIKE</div>
+                        <div id="val-feels" class="text-sm font-bold text-cyan-300">71.8°F</div>
                     </div>
-                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition">
-                        <div id="lbl-feels-type" class="text-[11px] text-slate-300 font-bold uppercase">FEELS / DEW</div>
-                        <div id="val-feels" class="text-base md:text-lg font-bold text-cyan-400">71.8° / 58.2°</div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">DEW POINT</div>
+                        <div id="val-dew" class="text-sm font-bold text-cyan-300">58.2°F</div>
                     </div>
-                    <div class="cursor-pointer hover:bg-slate-800/50 rounded transition">
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">HUM</div>
-                        <div id="val-out-humidity-digital" class="text-base md:text-lg font-bold text-cyan-400">62%</div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">MIN / MAX</div>
+                        <div id="val-temp-minmax" class="text-sm font-bold text-cyan-300">61.5° / 78.2°</div>
                     </div>
                 </div>
             </div>
@@ -266,7 +291,7 @@
                         <span class="text-xs text-slate-400">Console</span>
                     </div>
                 </div>
-                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center">
+                <div class="relative w-full grid grid-cols-2 gap-3 py-2 items-center justify-items-center my-auto">
                     <div class="flex flex-col items-center w-full min-h-[240px] justify-center">
                         <canvas id="gauge-in-temp" width="240" height="240" class="gauge-canvas gauge-view-inTemp"></canvas>
                         <div id="digital-container-in-temp" class="hidden flex-col items-center justify-center digital-view-inTemp text-center">
@@ -284,14 +309,18 @@
                         <span class="text-xs text-slate-300 font-bold mt-1 gauge-view-inTemp">Indoor Hum</span>
                     </div>
                 </div>
-                <div class="w-full grid grid-cols-2 gap-2 mt-2 text-center bg-slate-900/70 p-2.5 rounded-lg border border-slate-800">
-                    <div class="border-r border-slate-800">
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">INDOOR TEMP</div>
-                        <div id="val-in-temp" class="text-base md:text-lg font-bold text-cyan-400">71.2°F</div>
+                <div class="w-full grid grid-cols-3 gap-2 text-center border-t border-slate-800/80 pt-2.5 mt-2">
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">COMFORT</div>
+                        <div id="val-in-comfort" class="text-sm font-bold text-cyan-300">NORMAL</div>
                     </div>
-                    <div>
-                        <div class="text-[11px] text-slate-300 font-bold uppercase">INDOOR HUMIDITY</div>
-                        <div id="val-in-hum" class="text-base md:text-lg font-bold text-cyan-400">45%</div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">TEMP RANGE</div>
+                        <div id="val-in-temp-range" class="text-sm font-bold text-cyan-300">69.0° / 73.0°</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">HUM RANGE</div>
+                        <div id="val-in-hum-range" class="text-sm font-bold text-cyan-300">40% / 50%</div>
                     </div>
                 </div>
             </div>
@@ -315,21 +344,25 @@
                         </div>
                     </div>
                 </div>
-                <div class="relative w-full flex justify-center items-center py-1 min-h-[200px]">
+                <div class="relative w-full flex justify-center items-center py-2 min-h-[220px] my-auto">
                     <canvas id="gauge-baro" width="240" height="240" class="gauge-canvas gauge-view-baro"></canvas>
                     <div id="digital-container-baro" class="hidden flex-col items-center justify-center digital-view-baro text-center py-6">
                         <div id="digital-baro" class="font-black text-cyan-400 digital-readout-large">1013.2 hPa</div>
                         <div class="text-xs text-slate-400 font-bold uppercase mt-1">BAROMETRIC PRESSURE</div>
                     </div>
                 </div>
-                <div class="w-full grid grid-cols-2 gap-1.5 mt-1 text-center bg-slate-900/70 p-2 rounded-lg border border-slate-800">
-                    <div class="border-r border-slate-800 cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.setBaroUnit('hpa')">
-                        <div class="text-xs text-slate-300 font-bold uppercase">HPA / MB</div>
-                        <div id="val-baro-hpa" class="text-base font-bold text-cyan-400">1013.2</div>
+                <div class="w-full grid grid-cols-3 gap-2 text-center border-t border-slate-800/80 pt-2.5 mt-2">
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">TREND</div>
+                        <div id="val-baro-trend" class="text-sm font-bold text-cyan-300">STEADY</div>
                     </div>
-                    <div class="cursor-pointer hover:bg-slate-800/50 rounded transition" onclick="window.setBaroUnit('inhg')">
-                        <div class="text-xs text-slate-300 font-bold uppercase">INHG</div>
-                        <div id="val-baro-inhg" class="text-base font-bold text-cyan-400">29.92</div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">SEA LEVEL</div>
+                        <div id="val-baro-slp" class="text-sm font-bold text-cyan-300">1013.2 hPa</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
+                        <div class="text-[11px] text-slate-300 font-bold">24H RANGE</div>
+                        <div id="val-baro-range" class="text-sm font-bold text-cyan-300">+0.4 hPa</div>
                     </div>
                 </div>
             </div>
@@ -345,7 +378,6 @@
                     <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2">
                         <span class="font-bold text-cyan-300 text-xs tracking-wider"><i class="fa-solid fa-cloud-rain mr-1"></i> RAIN DATA</span>
                         <div class="flex items-center gap-1.5 text-[11px]">
-                            <!-- Feature Mode Selector Dropdown -->
                             <select id="rain-mode-select" onchange="window.setRainViewMode(this.value)" class="bg-slate-900 text-cyan-300 border border-slate-700 rounded px-1.5 py-0.5 font-bold focus:outline-none focus:border-cyan-500">
                                 <option value="liquid">1. Liquid Gauge View</option>
                                 <option value="rate">2. Rate & Intensity</option>
@@ -359,7 +391,6 @@
                         </div>
                     </div>
 
-                    <!-- Dynamic View Container -->
                     <div id="rain-view-container" class="min-h-[140px] flex flex-col justify-center">
                         <!-- Content dynamically rendered via renderRainView() -->
                     </div>
@@ -389,7 +420,6 @@
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-house-signal mr-1.5"></i> STATION TELEMETRY SUMMARY</span>
                 </div>
 
-                <!-- Classic LED Status Board -->
                 <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 grid grid-cols-2 gap-x-3 gap-y-2 text-xs font-bold my-auto">
                     <div class="flex items-center gap-2"><span class="led-indicator led-green"></span> LOGGING ACTIVE</div>
                     <div class="flex items-center gap-2"><span class="led-indicator led-green" id="led-api-status"></span> API LINK OK</div>
@@ -412,7 +442,7 @@
                 </div>
             </div>
 
-            <!-- Temperature, Barometer & Outdoor Humidity Graph (with Sync 8H History Button) -->
+            <!-- Temperature, Barometer & Outdoor Humidity Graph -->
             <div class="wd-panel p-3.5">
                 <div class="wd-header-bar px-3 py-1.5 rounded flex justify-between items-center mb-2.5">
                     <span class="font-bold text-cyan-300 text-sm tracking-wider"><i class="fa-solid fa-chart-area mr-1.5"></i> TEMP, BARO & HUMIDITY TRENDS</span>
@@ -437,6 +467,71 @@
         <div id="last-update-time">LAST PACKET: JUST NOW</div>
     </footer>
 
+    <!-- NWS WEATHER ALERT FULL EXPLANATION MODAL -->
+    <div id="nwsAlertModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="wd-panel w-full max-w-lg max-h-[90vh] rounded-xl p-4 sm:p-5 flex flex-col gap-3 border-rose-500/60 shadow-2xl relative">
+            <div class="flex items-start justify-between gap-2 border-b border-rose-500/30 pb-2.5 shrink-0">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600/30 text-rose-200 border border-rose-500/50" id="alertModalSeverity">WARNING</span>
+                        <span class="text-xs text-slate-400 font-semibold" id="alertModalSender">National Weather Service</span>
+                    </div>
+                    <h3 class="font-black text-base sm:text-lg text-rose-300 mt-1 leading-snug" id="alertModalEvent">Active Weather Alert</h3>
+                </div>
+                <button onclick="window.closeNwsAlertModal()" class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white border border-slate-700 shrink-0 cursor-pointer" title="Close Alert">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <div id="alertTabsContainer" class="hidden flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0"></div>
+
+            <div class="flex-1 overflow-y-auto flex flex-col gap-3 pr-1 text-xs">
+                <div class="bg-rose-950/50 border border-rose-500/40 rounded-lg p-3 text-rose-100 font-bold leading-snug" id="alertModalHeadline">--</div>
+
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <div class="text-[9px] uppercase font-bold text-slate-400">Effective / Onset</div>
+                        <div class="font-semibold text-slate-200 mt-0.5" id="alertModalEffective">--</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                        <div class="text-[9px] uppercase font-bold text-rose-400">Expires / Ends</div>
+                        <div class="font-semibold text-rose-200 mt-0.5" id="alertModalExpires">--</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                    <div class="text-[9px] uppercase font-bold text-slate-400 flex items-center gap-1">
+                        <i class="fa-solid fa-location-dot text-rose-400"></i> Affected Areas
+                    </div>
+                    <div class="text-[11px] text-slate-200 mt-1 leading-relaxed" id="alertModalAreas">--</div>
+                </div>
+
+                <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-800">
+                    <div class="text-[10px] uppercase font-black text-cyan-400 tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info"></i> Official NWS Explanation &amp; Impacts
+                    </div>
+                    <div class="text-slate-200 whitespace-pre-line leading-relaxed text-[11.5px]" id="alertModalDescription">--</div>
+                </div>
+
+                <div id="alertModalInstructionBox" class="bg-amber-950/35 p-3 rounded-lg border border-amber-500/40">
+                    <div class="text-[10px] uppercase font-black text-amber-400 tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved"></i> Precautionary / Preparedness Actions
+                    </div>
+                    <div class="text-amber-100 whitespace-pre-line leading-relaxed text-[11.5px]" id="alertModalInstruction">--</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 shrink-0 pt-2 border-t border-slate-800">
+                <a id="alertModalExternalLink" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer" class="py-2 px-3 rounded-lg bg-rose-600/25 hover:bg-rose-600/35 text-rose-200 font-bold text-xs border border-rose-500/40 flex items-center justify-center gap-1.5 transition cursor-pointer text-center">
+                    <i class="fa-solid fa-up-right-from-square text-[11px]"></i> NWS Point Page
+                </a>
+                <button onclick="window.closeNwsAlertModal()" class="py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs cursor-pointer transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Weather Station Manager Modal -->
     <div id="config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="wd-panel max-w-md w-full p-5 border-cyan-500/50 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -448,7 +543,6 @@
             </div>
             
             <div class="space-y-4 text-xs md:text-sm font-bold">
-                <!-- Station Selector & Add Button -->
                 <div class="flex flex-col gap-2 bg-slate-900/60 p-3.5 rounded-lg border border-slate-800">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-bold text-cyan-400 uppercase">Active Station Profile</label>
@@ -462,7 +556,6 @@
                     </div>
                 </div>
 
-                <!-- Active Station Settings Form -->
                 <div class="space-y-3 bg-slate-900/60 p-3.5 rounded-lg border border-slate-800">
                     <div>
                         <label class="block text-slate-300 mb-1">STATION NAME</label>
@@ -485,7 +578,6 @@
                         <input type="text" id="setting-app-key" placeholder="Enter Ambient Weather Application Key" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
                     </div>
 
-                    <!-- Unit Preferences & Refresh Interval selectors -->
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <div>
                             <label class="block text-slate-300 mb-1">TEMP UNIT</label>
@@ -521,7 +613,6 @@
                         </div>
                     </div>
 
-                    <!-- Gauge Size / Zoom Slider -->
                     <div class="pt-1">
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-slate-300">GAUGE SIZE (ZOOM)</label>
@@ -531,7 +622,6 @@
                         <p class="text-[10px] text-slate-400 mt-0.5">Enlarges all analog gauge dials equally and adapts panes.</p>
                     </div>
 
-                    <!-- Digital Display Font Size Slider -->
                     <div class="pt-1">
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-slate-300">DIGITAL DISPLAY FONT SIZE</label>
@@ -572,7 +662,6 @@
 
     <!-- APPLICATION LOGIC & SERVICE WORKER -->
     <script>
-        // Register Service Worker inline via Blob Data-URL for true single-file PWA support
         if ('serviceWorker' in navigator) {
             const swCode = `
                 self.addEventListener('install', (e) => {
@@ -620,9 +709,12 @@
         let tempBaroChart = null;
         let rainBarChart = null;
         
-        const maxChartHistory = 16; // 8 hours at 30-minute intervals
+        const maxChartHistory = 16;
         let lastChartUpdateTime = 0;
-        const chartUpdateIntervalMs = 30 * 60 * 1000; // 30 minutes
+        const chartUpdateIntervalMs = 30 * 60 * 1000;
+
+        let activeNwsAlerts = [];
+        let stationCoords = { lat: 29.6236, lon: -81.8898 };
 
         function cleanNumber(val) {
             if (typeof val === 'string') {
@@ -636,11 +728,18 @@
             return clean.toFixed(decimals);
         }
 
+        function safeSetText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+        }
+
         let config = {
             stations: [
                 {
                     name: "KD4BEE WX",
                     location: "Interlachen, FL",
+                    lat: 29.6236,
+                    lon: -81.8898,
                     macAddress: "8C:4F:00:4F:35:B2", 
                     apiKey: "546a87af80fb4cc19b43ed1d5d4bbaee7fa6f175baf44f3082d450f706ffbf89",
                     appKey: "7f76b38b64504544a02cdbf031215121118ab04e557547b7ba2a0c0f2ff6a688",
@@ -655,6 +754,8 @@
                 {
                     name: "Cherry Mountain",
                     location: "Cherry Mountain, NC",
+                    lat: 35.4248,
+                    lon: -81.7712,
                     macAddress: "E0:98:06:A3:3D:1D",
                     apiKey: "e628b3ba1253449591bc9bf5ebf32bee35017ec8e9b74666b26e50763fd21728",
                     appKey: "79231481a76f48b1a2f8e642d1e51ab4961283ee51564dbab14b945fdf3e6f37",
@@ -669,6 +770,8 @@
                 {
                     name: "Hollister",
                     location: "Hollister, FL",
+                    lat: 29.6244,
+                    lon: -81.7962,
                     macAddress: "48:3F:DA:89:B8:B2",
                     apiKey: "e628b3ba1253449591bc9bf5ebf32bee35017ec8e9b74666b26e50763fd21728",
                     appKey: "79231481a76f48b1a2f8e642d1e51ab4961283ee51564dbab14b945fdf3e6f37",
@@ -684,7 +787,6 @@
             activeStationIndex: 0
         };
 
-        // Load saved preferences from localStorage on startup
         function loadPersistedPreferences() {
             try {
                 const savedConfig = localStorage.getItem('christy_wx_config');
@@ -703,7 +805,6 @@
             }
         }
 
-        // Save preferences to localStorage
         function savePersistedPreferences() {
             try {
                 localStorage.setItem('christy_wx_config', JSON.stringify(config));
@@ -772,19 +873,310 @@
             tempMax: 78.2,
             baroInhg: 29.92,
             baroHpa: 1013.2,
-            rainRate: 0.00,
-            rainEvent: 0.04,
-            rainDaily: 0.04,
-            rainWeekly: 0.42,
-            rainMonthly: 2.18,
-            rainYearly: 14.35,
-            rainLastTimeStr: "3:05 PM",
+            baroTrend: 'STEADY',
+            baroRangeStr: '+0.4 hPa',
+            rainRate: 0,
+            rainEvent: 0,
+            rainDaily: 0,
+            rainWeekly: 0,
+            rainMonthly: 0,
+            rainYearly: 0,
+            rainLastTimeStr: "--",
             dryStreakDays: 0,
+            weeklyHistory: [0, 0, 0, 0, 0, 0, 0],
             solar: 485,
             uv: 3,
             inTemp: 71.2,
             inHum: 45,
+            inTempMin: 69.0,
+            inTempMax: 73.0,
+            inHumMin: 40,
+            inHumMax: 50,
             outHum: 62
+        };
+
+        function resetRainTelemetryForStation() {
+            weatherData.rainRate = 0;
+            weatherData.rainEvent = 0;
+            weatherData.rainDaily = 0;
+            weatherData.rainWeekly = 0;
+            weatherData.rainMonthly = 0;
+            weatherData.rainYearly = 0;
+            weatherData.rainLastTimeStr = "--";
+            weatherData.dryStreakDays = 0;
+            weatherData.weeklyHistory = [0, 0, 0, 0, 0, 0, 0];
+        }
+
+        function computeRainHistoryAndTrackerFromLogs(logs, latestPacket) {
+            const now = Date.now();
+            const dayMs = 24 * 60 * 60 * 1000;
+
+            const dayBuckets = [0, 0, 0, 0, 0, 0, 0];
+            const dayKeys = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now - i * dayMs);
+                const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                dayKeys.push(key);
+            }
+
+            let latestRainTimestamp = null;
+
+            const allEntries = Array.isArray(logs) ? [...logs] : [];
+            if (latestPacket && (cleanNumber(latestPacket.dailyrainin) > 0 || cleanNumber(latestPacket.hourlyrainin) > 0 || cleanNumber(latestPacket.eventrainin) > 0)) {
+                allEntries.push(latestPacket);
+            }
+
+            allEntries.forEach(entry => {
+                const ts = new Date(entry.date || entry.dateutc).getTime();
+                if (isNaN(ts)) return;
+
+                const d = new Date(ts);
+                const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                const bucketIdx = dayKeys.indexOf(key);
+
+                const dailyVal = cleanNumber(entry.dailyrainin);
+                const hourlyVal = cleanNumber(entry.hourlyrainin);
+                const eventVal = cleanNumber(entry.eventrainin);
+                const amount = Math.max(dailyVal, hourlyVal, eventVal);
+
+                if (bucketIdx !== -1) {
+                    dayBuckets[bucketIdx] = Math.max(dayBuckets[bucketIdx], dailyVal);
+                }
+
+                if (amount > 0) {
+                    if (latestRainTimestamp === null || ts > latestRainTimestamp) {
+                        latestRainTimestamp = ts;
+                    }
+                }
+            });
+
+            dayBuckets[6] = Math.max(dayBuckets[6], cleanNumber(weatherData.rainDaily));
+            weatherData.weeklyHistory = dayBuckets;
+
+            if (latestPacket?.lastRain) {
+                const lrDate = new Date(latestPacket.lastRain);
+                if (!isNaN(lrDate.getTime()) && (!latestRainTimestamp || lrDate.getTime() > latestRainTimestamp)) {
+                    latestRainTimestamp = lrDate.getTime();
+                }
+            }
+
+            if (weatherData.rainRate > 0) {
+                weatherData.rainLastTimeStr = "NOW";
+                weatherData.dryStreakDays = 0;
+            } else if (latestRainTimestamp !== null) {
+                const lrDate = new Date(latestRainTimestamp);
+                const isToday = lrDate.toDateString() === new Date(now).toDateString();
+                const timeStr = lrDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                weatherData.rainLastTimeStr = isToday ? `Today ${timeStr}` : `${lrDate.getMonth() + 1}/${lrDate.getDate()} ${timeStr}`;
+
+                if (isToday || weatherData.rainDaily > 0) {
+                    weatherData.dryStreakDays = 0;
+                } else {
+                    const startOfToday = new Date(now);
+                    startOfToday.setHours(0, 0, 0, 0);
+                    const startOfRainDay = new Date(latestRainTimestamp);
+                    startOfRainDay.setHours(0, 0, 0, 0);
+                    weatherData.dryStreakDays = Math.max(1, Math.round((startOfToday.getTime() - startOfRainDay.getTime()) / dayMs));
+                }
+            } else {
+                weatherData.rainLastTimeStr = weatherData.rainDaily > 0 ? "Today" : "--";
+                weatherData.dryStreakDays = weatherData.rainDaily > 0 ? 0 : 7;
+            }
+        }
+
+        function formatNwsTimestamp(isoStr) {
+            if (!isoStr) return "Until further notice";
+            try {
+                const dt = new Date(isoStr);
+                if (isNaN(dt.getTime())) return isoStr;
+                return dt.toLocaleString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                });
+            } catch (e) {
+                return isoStr;
+            }
+        }
+
+        async function resolveStationCoordinatesForAlerts(curSt) {
+            if (curSt && Number.isFinite(Number(curSt.lat)) && Number.isFinite(Number(curSt.lon))) {
+                stationCoords = { lat: Number(curSt.lat), lon: Number(curSt.lon) };
+                return stationCoords;
+            }
+
+            const locQuery = (curSt && (curSt.location || curSt.name)) || "Interlachen, FL";
+            try {
+                const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locQuery)}`);
+                if (geoRes.ok) {
+                    const geoData = await geoRes.json();
+                    if (Array.isArray(geoData) && geoData.length > 0) {
+                        const lat = parseFloat(geoData[0].lat);
+                        const lon = parseFloat(geoData[0].lon);
+                        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                            stationCoords = { lat, lon };
+                            if (curSt) {
+                                curSt.lat = lat;
+                                curSt.lon = lon;
+                                savePersistedPreferences();
+                            }
+                            return stationCoords;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Alert geocoding fallback failed:", e);
+            }
+
+            return stationCoords;
+        }
+
+        async function checkNwsAlerts(overrideCoords = null) {
+            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+            const alertPane = document.getElementById('nwsAlertPane');
+            const alertTitle = document.getElementById('nwsAlertTitle');
+            const alertCountBadge = document.getElementById('nwsAlertCountBadge');
+            const alertBannerLabel = document.getElementById('nwsAlertBannerLabel');
+
+            if (!alertPane || !alertTitle) return;
+
+            let coords = overrideCoords;
+            if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lon)) {
+                coords = await resolveStationCoordinatesForAlerts(curSt);
+            }
+
+            if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lon)) {
+                activeNwsAlerts = [];
+                alertPane.classList.add('hidden');
+                return;
+            }
+
+            const { lat, lon } = coords;
+
+            try {
+                const res = await fetch(
+                    `https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,
+                    { headers: { 'Accept': 'application/geo+json' } }
+                );
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && Array.isArray(data.features) && data.features.length > 0) {
+                        activeNwsAlerts = data.features.map(f => {
+                            const p = f.properties || {};
+                            return {
+                                id: p.id || f.id || "",
+                                event: p.event || "Weather Alert",
+                                severity: p.severity || "Advisory",
+                                certainty: p.certainty || "",
+                                urgency: p.urgency || "",
+                                senderName: p.senderName || "National Weather Service",
+                                headline: p.headline || p.event || "Active Weather Alert",
+                                description: p.description || "No detailed description provided by the National Weather Service.",
+                                instruction: p.instruction || "",
+                                areaDesc: p.areaDesc || "Local Forecast Area",
+                                effective: p.onset || p.effective || p.sent || "",
+                                expires: p.ends || p.expires || "",
+                                lat,
+                                lon
+                            };
+                        });
+
+                        const primary = activeNwsAlerts[0];
+                        const combinedMarquee = activeNwsAlerts.length > 1
+                            ? activeNwsAlerts.map(a => `${a.event}: ${a.headline}`).join('   •••   ')
+                            : primary.headline;
+
+                        alertTitle.innerText = combinedMarquee;
+
+                        if (alertBannerLabel) {
+                            alertBannerLabel.innerText = activeNwsAlerts.length > 1
+                                ? `${activeNwsAlerts.length} Active NWS Alerts • Tap for Full Details`
+                                : `Active NWS ${primary.event} • Tap for Details`;
+                        }
+
+                        if (alertCountBadge) {
+                            if (activeNwsAlerts.length > 1) {
+                                alertCountBadge.innerText = `${activeNwsAlerts.length} ALERTS`;
+                                alertCountBadge.classList.remove('hidden');
+                            } else {
+                                alertCountBadge.classList.add('hidden');
+                            }
+                        }
+
+                        alertPane.classList.remove('hidden');
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn("NWS alerts fetch encountered an issue:", err);
+            }
+
+            activeNwsAlerts = [];
+            alertPane.classList.add('hidden');
+        }
+
+        window.openNwsAlertModal = function(alertIndex = 0) {
+            if (!activeNwsAlerts || activeNwsAlerts.length === 0) return;
+
+            const idx = Math.max(0, Math.min(alertIndex, activeNwsAlerts.length - 1));
+            const alert = activeNwsAlerts[idx];
+
+            const tabsContainer = document.getElementById('alertTabsContainer');
+            if (tabsContainer) {
+                if (activeNwsAlerts.length > 1) {
+                    tabsContainer.classList.remove('hidden');
+                    tabsContainer.innerHTML = "";
+                    activeNwsAlerts.forEach((item, i) => {
+                        const btn = document.createElement('button');
+                        btn.type = "button";
+                        btn.onclick = () => window.openNwsAlertModal(i);
+                        btn.className = i === idx
+                            ? "px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-600 text-white shrink-0 cursor-pointer transition"
+                            : "px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 shrink-0 cursor-pointer transition";
+                        btn.innerText = `${i + 1}. ${item.event}`;
+                        tabsContainer.appendChild(btn);
+                    });
+                } else {
+                    tabsContainer.classList.add('hidden');
+                }
+            }
+
+            const badgeText = [alert.severity, alert.urgency].filter(Boolean).join(' • ').toUpperCase() || 'ACTIVE ALERT';
+            safeSetText('alertModalSeverity', badgeText);
+            safeSetText('alertModalSender', alert.senderName);
+            safeSetText('alertModalEvent', alert.event);
+            safeSetText('alertModalHeadline', alert.headline);
+            safeSetText('alertModalEffective', formatNwsTimestamp(alert.effective));
+            safeSetText('alertModalExpires', formatNwsTimestamp(alert.expires));
+            safeSetText('alertModalAreas', alert.areaDesc);
+            safeSetText('alertModalDescription', alert.description.trim());
+
+            const instrBox = document.getElementById('alertModalInstructionBox');
+            if (instrBox) {
+                if (alert.instruction && alert.instruction.trim().length > 0) {
+                    instrBox.classList.remove('hidden');
+                    safeSetText('alertModalInstruction', alert.instruction.trim());
+                } else {
+                    instrBox.classList.add('hidden');
+                }
+            }
+
+            const extLink = document.getElementById('alertModalExternalLink');
+            if (extLink && Number.isFinite(alert.lat) && Number.isFinite(alert.lon)) {
+                extLink.href = `https://forecast.weather.gov/MapClick.php?lat=${alert.lat.toFixed(4)}&lon=${alert.lon.toFixed(4)}`;
+            }
+
+            const modal = document.getElementById('nwsAlertModal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeNwsAlertModal = function() {
+            const modal = document.getElementById('nwsAlertModal');
+            if (modal) modal.classList.add('hidden');
         };
 
         function fToC(f) { return (f - 32) * 5 / 9; }
@@ -835,10 +1227,6 @@
             updateChartsWithCurrentUnits();
         };
 
-        window.toggleUnits = function() {
-            window.setTempUnit(currentTempUnit === 'F' ? 'C' : 'F');
-        };
-
         window.setWindUnit = function(unit) {
             currentWindUnit = unit;
             const btnMph = document.getElementById('unit-wind-mph');
@@ -853,17 +1241,8 @@
             if (unit === 'kmh' && btnKmh) btnKmh.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
             if (unit === 'kts' && btnKts) btnKts.className = 'px-2 py-0.5 rounded bg-cyan-600 text-white font-bold cursor-pointer hover:bg-cyan-500';
 
-            const lblUnit = document.getElementById('lbl-wind-unit');
-            if (lblUnit) lblUnit.innerText = unit.toUpperCase();
-
             renderAllGauges();
             updateChartsWithCurrentUnits();
-        };
-
-        window.cycleWindUnit = function() {
-            if (currentWindUnit === 'mph') window.setWindUnit('kmh');
-            else if (currentWindUnit === 'kmh') window.setWindUnit('kts');
-            else window.setWindUnit('mph');
         };
 
         window.setRainViewMode = function(mode) {
@@ -874,9 +1253,9 @@
         function getRainIntensityInfo(rate) {
             if (rate <= 0) return { label: 'NO RAIN', color: 'text-slate-400', bg: 'bg-slate-800', barColor: 'bg-slate-700', pct: 0 };
             if (rate < 0.1) return { label: 'LIGHT DRIZZLE', color: 'text-cyan-300', bg: 'bg-cyan-950', barColor: 'bg-cyan-400', pct: 25 };
-            if (rate < 0.3) return { label: 'MODERATE RAIN', color: 'text-emerald-400', bg: 'bg-emerald-950', barColor: 'bg-emerald-400', pct: 50 };
+            if (rate < 0.3) return { label: 'MODERATE RAIN', color: 'text-cyan-300', bg: 'bg-cyan-950', barColor: 'bg-cyan-400', pct: 50 };
             if (rate < 0.5) return { label: 'HEAVY RAIN', color: 'text-cyan-300', bg: 'bg-cyan-950', barColor: 'bg-cyan-400', pct: 75 };
-            return { label: 'TORRENTIAL DOWNPOUR', color: 'text-rose-400', bg: 'bg-rose-950', barColor: 'bg-rose-500', pct: 100 };
+            return { label: 'HEAVY DOWNPOUR', color: 'text-cyan-300', bg: 'bg-cyan-950', barColor: 'bg-cyan-400', pct: 100 };
         }
 
         function renderRainView() {
@@ -887,10 +1266,10 @@
             const rUnitStr = currentRainUnit === 'mm' ? 'mm' : 'in';
 
             if (activeRainMode === 'liquid') {
-                const dailyVal = (weatherData.rainDaily * rMult);
+                const dailyVal = (cleanNumber(weatherData.rainDaily) * rMult);
                 const maxCap = currentRainUnit === 'mm' ? 25 : 1.0;
                 const fillPct = Math.min(100, Math.max(8, (dailyVal / maxCap) * 100));
-                const intensity = getRainIntensityInfo(weatherData.rainRate);
+                const intensity = getRainIntensityInfo(cleanNumber(weatherData.rainRate));
 
                 container.innerHTML = `
                     <div class="flex items-center gap-3">
@@ -906,7 +1285,7 @@
                             <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800 flex justify-between items-center">
                                 <div>
                                     <div class="text-[10px] text-slate-400 font-bold uppercase">EVENT TOTAL</div>
-                                    <div class="text-xs font-bold text-slate-200">${(weatherData.rainEvent * rMult).toFixed(2)} ${rUnitStr}</div>
+                                    <div class="text-xs font-bold text-slate-200">${(cleanNumber(weatherData.rainEvent) * rMult).toFixed(2)} ${rUnitStr}</div>
                                 </div>
                                 <span class="text-[10px] font-bold ${intensity.color} ${intensity.bg} border border-slate-700 px-2 py-0.5 rounded">${intensity.label}</span>
                             </div>
@@ -914,8 +1293,8 @@
                     </div>
                 `;
             } else if (activeRainMode === 'rate') {
-                const rateVal = (weatherData.rainRate * rMult);
-                const intensity = getRainIntensityInfo(weatherData.rainRate);
+                const rateVal = (cleanNumber(weatherData.rainRate) * rMult);
+                const intensity = getRainIntensityInfo(cleanNumber(weatherData.rainRate));
 
                 container.innerHTML = `
                     <div class="space-y-2">
@@ -942,27 +1321,27 @@
                     <div class="grid grid-cols-3 gap-1.5 text-center">
                         <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                             <div class="text-[10px] text-slate-400 font-bold">HOURLY RATE</div>
-                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainRate * rMult).toFixed(2)} ${rUnitStr}</div>
+                            <div class="text-xs font-bold text-cyan-300">${(cleanNumber(weatherData.rainRate) * rMult).toFixed(2)} ${rUnitStr}</div>
                         </div>
                         <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                             <div class="text-[10px] text-slate-400 font-bold">EVENT</div>
-                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainEvent * rMult).toFixed(2)} ${rUnitStr}</div>
+                            <div class="text-xs font-bold text-cyan-300">${(cleanNumber(weatherData.rainEvent) * rMult).toFixed(2)} ${rUnitStr}</div>
                         </div>
                         <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                             <div class="text-[10px] text-slate-400 font-bold">DAILY</div>
-                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainDaily * rMult).toFixed(2)} ${rUnitStr}</div>
+                            <div class="text-xs font-bold text-cyan-300">${(cleanNumber(weatherData.rainDaily) * rMult).toFixed(2)} ${rUnitStr}</div>
                         </div>
                         <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                             <div class="text-[10px] text-slate-400 font-bold">WEEKLY</div>
-                            <div class="text-xs font-bold text-slate-200">${(weatherData.rainWeekly * rMult).toFixed(2)} ${rUnitStr}</div>
+                            <div class="text-xs font-bold text-slate-200">${(cleanNumber(weatherData.rainWeekly) * rMult).toFixed(2)} ${rUnitStr}</div>
                         </div>
                         <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                             <div class="text-[10px] text-slate-400 font-bold">MONTHLY</div>
-                            <div class="text-xs font-bold text-slate-200">${(weatherData.rainMonthly * rMult).toFixed(2)} ${rUnitStr}</div>
+                            <div class="text-xs font-bold text-slate-200">${(cleanNumber(weatherData.rainMonthly) * rMult).toFixed(2)} ${rUnitStr}</div>
                         </div>
                         <div class="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
                             <div class="text-[10px] text-slate-400 font-bold">YEARLY</div>
-                            <div class="text-xs font-bold text-cyan-300">${(weatherData.rainYearly * rMult).toFixed(2)} ${rUnitStr}</div>
+                            <div class="text-xs font-bold text-cyan-300">${(cleanNumber(weatherData.rainYearly) * rMult).toFixed(2)} ${rUnitStr}</div>
                         </div>
                     </div>
                 `;
@@ -974,25 +1353,16 @@
                 `;
                 setTimeout(initRainMiniChart, 50);
             } else if (activeRainMode === 'tracker') {
-                const isRaining = weatherData.rainRate > 0;
-                let computedDryStreakDays = weatherData.dryStreakDays;
-                if (isRaining || weatherData.rainDaily > 0) {
-                    computedDryStreakDays = 0;
-                }
-
-                let lastRainDisplay = weatherData.rainLastTimeStr || '3:05 PM';
-                if (isRaining) {
-                    lastRainDisplay = 'NOW';
-                } else if (weatherData.rainDaily > 0 && lastRainDisplay === '3:05 PM') {
-                    lastRainDisplay = `Today ${lastRainDisplay}`;
-                }
+                const isRaining = cleanNumber(weatherData.rainRate) > 0;
+                const computedDryStreakDays = (isRaining || cleanNumber(weatherData.rainDaily) > 0) ? 0 : cleanNumber(weatherData.dryStreakDays);
+                const lastRainDisplay = weatherData.rainLastTimeStr || '--';
 
                 container.innerHTML = `
                     <div class="space-y-2">
                         <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <span class="led-indicator ${isRaining ? 'led-red animate-ping' : (weatherData.rainDaily > 0 ? 'led-yellow' : 'led-off')}"></span>
-                                <span class="text-xs font-bold text-slate-200">${isRaining ? 'ACTIVE RAIN DETECTED' : (weatherData.rainDaily > 0 ? 'RAIN RECORDED TODAY' : 'NO ACTIVE PRECIPITATION')}</span>
+                                <span class="led-indicator ${isRaining ? 'led-green' : 'led-off'}"></span>
+                                <span class="text-xs font-bold text-slate-200">${isRaining ? 'ACTIVE RAIN DETECTED' : (cleanNumber(weatherData.rainDaily) > 0 ? 'RAIN RECORDED TODAY' : 'NO ACTIVE PRECIPITATION')}</span>
                             </div>
                             <span class="text-[10px] bg-slate-800 text-cyan-300 px-2 py-0.5 rounded border border-slate-700">Storm Guard</span>
                         </div>
@@ -1028,7 +1398,7 @@
                 dateLabels.push(`${monthStr} ${dayNum}`);
             }
 
-            const chartData = dailyData.map(val => Number((val * rMult).toFixed(2)));
+            const chartData = dailyData.map(val => Number((cleanNumber(val) * rMult).toFixed(2)));
 
             if (rainBarChart) rainBarChart.destroy();
             rainBarChart = new Chart(ctx, {
@@ -1038,7 +1408,7 @@
                     datasets: [{
                         label: 'Rain (' + (currentRainUnit.toUpperCase()) + ')',
                         data: chartData,
-                        backgroundColor: chartData.map((v, i) => i === 6 ? '#00ff66' : '#00f0ff'),
+                        backgroundColor: '#00f0ff',
                         borderRadius: 4
                     }]
                 },
@@ -1067,6 +1437,7 @@
                 if (btnIn) btnIn.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold cursor-pointer';
             }
             renderAllGauges();
+            renderRainView();
         };
 
         function degToCardinal(deg) {
@@ -1080,6 +1451,15 @@
             if (uv <= 7) return 'HIGH';
             if (uv <= 10) return 'VERY HIGH';
             return 'EXTREME';
+        }
+
+        function getIndoorComfortLabel(tempF, hum) {
+            const t = cleanNumber(tempF);
+            const h = cleanNumber(hum);
+            if (t >= 67 && t <= 76 && h >= 30 && h <= 55) return 'COMFORTABLE';
+            if (h > 60) return 'HUMID';
+            if (h < 30) return 'DRY';
+            return 'NORMAL';
         }
 
         async function syncTimeWithAkamai() {
@@ -1165,7 +1545,7 @@
             const startAngle = Math.PI * 0.75;
             const totalAngle = Math.PI * 1.5;
 
-            if (colorZones) {
+            if (colorZones && colorZones.length > 0) {
                 colorZones.forEach(zone => {
                     const zStart = startAngle + ((zone.from - min) / (max - min)) * totalAngle;
                     const zEnd = startAngle + ((zone.to - min) / (max - min)) * totalAngle;
@@ -1301,10 +1681,10 @@
             }
 
             const cardinals = [
-                { label: 'N', deg: 0, color: '#ff3355' },
-                { label: 'E', deg: 90, color: skin.textColor },
-                { label: 'S', deg: 180, color: skin.textColor },
-                { label: 'W', deg: 270, color: skin.textColor }
+                { label: 'N', deg: 0 },
+                { label: 'E', deg: 90 },
+                { label: 'S', deg: 180 },
+                { label: 'W', deg: 270 }
             ];
 
             const cardFontSize = Math.max(11, Math.round(w * 0.055));
@@ -1313,7 +1693,7 @@
                 const rad = (pt.deg - 90) * (Math.PI / 180);
                 const tx = cx + Math.cos(rad) * (radius - 8);
                 const ty = cy + Math.sin(rad) * (radius - 8);
-                ctx.fillStyle = pt.color;
+                ctx.fillStyle = skin.textColor;
                 ctx.fillText(pt.label, tx, ty);
             });
 
@@ -1321,7 +1701,7 @@
                 const avgRad = (avgDegrees - 90) * (Math.PI / 180);
                 ctx.beginPath();
                 ctx.arc(cx, cy, radius - 36, avgRad - 0.25, avgRad + 0.25);
-                ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
                 ctx.lineWidth = 7;
                 ctx.stroke();
             }
@@ -1332,7 +1712,6 @@
             ctx.translate(cx, cy);
             ctx.rotate(needleRad);
             ctx.beginPath();
-            // Arrow pointing inwards towards center (0,0) from the origin direction ring
             ctx.moveTo(0, -radius + 34); 
             ctx.lineTo(8, -radius + 12);
             ctx.lineTo(-8, -radius + 12);
@@ -1391,43 +1770,53 @@
                 displayWindSpeed, 
                 0, windMaxGauge, 
                 'WIND', windUnitLabel,
-                [
-                    { from: 0, to: windMaxGauge * 0.25, color: '#00ff66' },
-                    { from: windMaxGauge * 0.25, to: windMaxGauge * 0.5, color: '#ffee00' },
-                    { from: windMaxGauge * 0.5, to: windMaxGauge * 0.75, color: '#ff9900' },
-                    { from: windMaxGauge * 0.75, to: windMaxGauge, color: '#ff3355' }
-                ],
+                null,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
             drawCompassDial('gauge-wind-dir', weatherData.windDeg, weatherData.windAvgDeg);
 
+            const elGust = document.getElementById('val-gust');
+            if (elGust) elGust.innerText = `${formatNoComma(displayWindGust, 1)} ${windUnitLabel}`;
+
+            const elWindMax = document.getElementById('val-wind-max');
+            if (elWindMax) elWindMax.innerText = `${formatNoComma(displayWindMax, 1)} ${windUnitLabel}`;
+
+            const elWindAvgDir = document.getElementById('val-wind-avg-dir');
+            if (elWindAvgDir) elWindAvgDir.innerText = degToCardinal(weatherData.windAvgDeg);
+
             const displayTemp = currentTempUnit === 'F' ? weatherData.temp : fToC(weatherData.temp);
+            const displayFeels = currentTempUnit === 'F' ? weatherData.feels : fToC(weatherData.feels);
+            const displayDew = currentTempUnit === 'F' ? weatherData.dew : fToC(weatherData.dew);
+            const displayTempMin = currentTempUnit === 'F' ? weatherData.tempMin : fToC(weatherData.tempMin);
+            const displayTempMax = currentTempUnit === 'F' ? weatherData.tempMax : fToC(weatherData.tempMax);
             const minTemp = currentTempUnit === 'F' ? -10 : -20;
             const maxTemp = currentTempUnit === 'F' ? 110 : 45;
+
             drawGaugeDial(
                 'gauge-temp',
                 displayTemp,
                 minTemp, maxTemp,
                 'TEMP', '°' + currentTempUnit,
-                [
-                    { from: minTemp, to: currentTempUnit === 'F' ? 32 : 0, color: '#00f0ff' },
-                    { from: currentTempUnit === 'F' ? 32 : 0, to: currentTempUnit === 'F' ? 85 : 29, color: '#00ff66' },
-                    { from: currentTempUnit === 'F' ? 85 : 29, to: maxTemp, color: '#ff3355' }
-                ],
+                null,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
+
+            const elFeels = document.getElementById('val-feels');
+            if (elFeels) elFeels.innerText = `${formatNoComma(displayFeels, 1)}°${currentTempUnit}`;
+
+            const elDew = document.getElementById('val-dew');
+            if (elDew) elDew.innerText = `${formatNoComma(displayDew, 1)}°${currentTempUnit}`;
+
+            const elTempMinMax = document.getElementById('val-temp-minmax');
+            if (elTempMinMax) elTempMinMax.innerText = `${formatNoComma(displayTempMin, 1)}° / ${formatNoComma(displayTempMax, 1)}°`;
 
             drawGaugeDial(
                 'gauge-out-hum',
                 weatherData.outHum,
                 0, 100,
                 'HUM', '%',
-                [
-                    { from: 0, to: 30, color: '#ff9900' },
-                    { from: 30, to: 70, color: '#00ff66' },
-                    { from: 70, to: 100, color: '#00f0ff' }
-                ],
+                null,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
@@ -1437,11 +1826,7 @@
                 displayInTemp,
                 minTemp, maxTemp,
                 'IN TEMP', '°' + currentTempUnit,
-                [
-                    { from: minTemp, to: currentTempUnit === 'F' ? 65 : 18, color: '#00f0ff' },
-                    { from: currentTempUnit === 'F' ? 65 : 18, to: currentTempUnit === 'F' ? 80 : 26, color: '#00ff66' },
-                    { from: currentTempUnit === 'F' ? 80 : 26, to: maxTemp, color: '#ff3355' }
-                ],
+                null,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
@@ -1450,13 +1835,27 @@
                 weatherData.inHum,
                 0, 100,
                 'IN HUM', '%',
-                [
-                    { from: 0, to: 30, color: '#ff9900' },
-                    { from: 30, to: 65, color: '#00ff66' },
-                    { from: 65, to: 100, color: '#ff3355' }
-                ],
+                null,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
+
+            const displayInMin = currentTempUnit === 'F' ? weatherData.inTempMin : fToC(weatherData.inTempMin);
+            const displayInMax = currentTempUnit === 'F' ? weatherData.inTempMax : fToC(weatherData.inTempMax);
+            const displayInHumMin = Math.round(cleanNumber(weatherData.inHumMin));
+            const displayInHumMax = Math.round(cleanNumber(weatherData.inHumMax));
+
+            const elInComfort = document.getElementById('val-in-comfort');
+            if (elInComfort) elInComfort.innerText = getIndoorComfortLabel(weatherData.inTemp, weatherData.inHum);
+
+            const elInTempRange = document.getElementById('val-in-temp-range');
+            if (elInTempRange) elInTempRange.innerText = `${formatNoComma(displayInMin, 1)}° / ${formatNoComma(displayInMax, 1)}°`;
+
+            const elInHumRange = document.getElementById('val-in-hum-range');
+            if (elInHumRange) elInHumRange.innerText = `${displayInHumMin}% / ${displayInHumMax}%`;
+
+            const elBaroTrend = document.getElementById('val-baro-trend');
+            const elBaroSlp = document.getElementById('val-baro-slp');
+            const elBaroRange = document.getElementById('val-baro-range');
 
             if (currentBaroUnit === 'inhg') {
                 drawGaugeDial(
@@ -1464,75 +1863,30 @@
                     weatherData.baroInhg,
                     28.5, 31.5,
                     'BARO', 'inHg',
-                    [
-                        { from: 28.5, to: 29.8, color: '#ff9900' },
-                        { from: 29.8, to: 30.2, color: '#00ff66' },
-                        { from: 30.2, to: 31.5, color: '#00f0ff' }
-                    ],
+                    null,
                     { needleColor: '#00f0ff', tickCount: 6, valDecimals: 2, digitalYOffset: 0.30 }
                 );
+                if (elBaroSlp) elBaroSlp.innerText = `${formatNoComma(weatherData.baroInhg, 2)} inHg`;
+                if (elBaroRange) elBaroRange.innerText = `+0.01 inHg`;
             } else {
                 drawGaugeDial(
                     'gauge-baro',
                     weatherData.baroHpa,
                     965, 1065,
                     'BARO', 'hPa',
-                    [
-                        { from: 965, to: 1008, color: '#ff9900' },
-                        { from: 1008, to: 1022, color: '#00ff66' },
-                        { from: 1022, to: 1065, color: '#00f0ff' }
-                    ],
+                    null,
                     { needleColor: '#00f0ff', tickCount: 5, valDecimals: 1, digitalYOffset: 0.30 }
                 );
+                if (elBaroSlp) elBaroSlp.innerText = `${formatNoComma(weatherData.baroHpa, 1)} hPa`;
+                if (elBaroRange) elBaroRange.innerText = weatherData.baroRangeStr || `+0.4 hPa`;
             }
-
-            const elWindSpeed = document.getElementById('val-wind-speed');
-            if (elWindSpeed) elWindSpeed.innerText = displayWindSpeed.toFixed(1);
-
-            const elWindGust = document.getElementById('val-wind-gust');
-            if (elWindGust) elWindGust.innerText = displayWindGust.toFixed(1);
-
-            const elWindMax = document.getElementById('val-wind-max');
-            if (elWindMax) elWindMax.innerText = displayWindMax.toFixed(1);
-
-            const elWindCardinal = document.getElementById('val-wind-cardinal');
-            if (elWindCardinal) elWindCardinal.innerText = `${degToCardinal(weatherData.windDeg)} (${String(Math.round(weatherData.windDeg)).padStart(3, '0')}°)`;
-
-            const elTemp = document.getElementById('val-temp');
-            if (elTemp) elTemp.innerText = `${displayTemp.toFixed(1)}°${currentTempUnit}`;
-
-            const elFeels = document.getElementById('val-feels');
-            if (elFeels) elFeels.innerText = `${(currentTempUnit === 'F' ? weatherData.feels : fToC(weatherData.feels)).toFixed(1)}° / ${(currentTempUnit === 'F' ? weatherData.dew : fToC(weatherData.dew)).toFixed(1)}°`;
-
-            const elOutHum = document.getElementById('val-out-humidity-digital');
-            if (elOutHum) elOutHum.innerText = `${weatherData.outHum}%`;
-
-            const elBaroInhg = document.getElementById('val-baro-inhg');
-            if (elBaroInhg) elBaroInhg.innerText = formatNoComma(weatherData.baroInhg, 2);
-
-            const elBaroHpa = document.getElementById('val-baro-hpa');
-            if (elBaroHpa) elBaroHpa.innerText = formatNoComma(weatherData.baroHpa, 1);
-
-            const rMult = currentRainUnit === 'mm' ? 25.4 : 1;
-            const rUnitStr = currentRainUnit === 'mm' ? 'mm' : 'in';
-
-            const elRainEvent = document.getElementById('val-rain-event');
-            if (elRainEvent) elRainEvent.innerText = `${(weatherData.rainEvent * rMult).toFixed(2)} ${rUnitStr}`;
-
-            const elRainDaily = document.getElementById('val-rain-daily');
-            if (elRainDaily) elRainDaily.innerText = `${(weatherData.rainDaily * rMult).toFixed(2)} ${rUnitStr}`;
+            if (elBaroTrend) elBaroTrend.innerText = weatherData.baroTrend || 'STEADY';
 
             const elSolar = document.getElementById('val-solar');
             if (elSolar) elSolar.innerText = `${Math.round(weatherData.solar)} W/m²`;
 
             const elUv = document.getElementById('val-uv');
             if (elUv) elUv.innerText = `${weatherData.uv} (${getUvIndexCategory(weatherData.uv)})`;
-
-            const elInTemp = document.getElementById('val-in-temp');
-            if (elInTemp) elInTemp.innerText = `${displayInTemp.toFixed(1)}°${currentTempUnit}`;
-
-            const elInHum = document.getElementById('val-in-hum');
-            if (elInHum) elInHum.innerText = `${weatherData.inHum}%`;
 
             const digWindSpd = document.getElementById('digital-wind-speed');
             if (digWindSpd) digWindSpd.innerText = displayWindSpeed.toFixed(1);
@@ -1562,15 +1916,14 @@
 
             const rainLed = document.getElementById('led-rain-flag');
             if (rainLed) {
-                if (weatherData.rainRate > 0) {
-                    rainLed.className = 'led-indicator led-red';
+                if (cleanNumber(weatherData.rainRate) > 0) {
+                    rainLed.className = 'led-indicator led-green';
                 } else {
                     rainLed.className = 'led-indicator led-off';
                 }
             }
         }
 
-        // Global storage for raw historic log items fetched from Ambient API
         let rawHistoricLogs = [];
 
         function initCharts() {
@@ -1642,8 +1995,8 @@
                         {
                             label: 'Outdoor Humidity',
                             data: [],
-                            borderColor: '#ff3355',
-                            backgroundColor: 'rgba(255, 51, 85, 0.1)',
+                            borderColor: '#00f0ff',
+                            backgroundColor: 'rgba(0, 240, 255, 0.08)',
                             fill: true,
                             yAxisID: 'yHum',
                             tension: 0.3,
@@ -1684,7 +2037,7 @@
                             min: 0,
                             max: 100,
                             ticks: { 
-                                color: '#ff3355', 
+                                color: '#00f0ff', 
                                 font: { family: chartFontFamily, size: 10, weight: 'bold' },
                                 callback: function(val) { return val + '%'; }
                             }
@@ -1753,6 +2106,11 @@
             const baroData = [];
             const humData = [];
 
+            let minIn = Infinity;
+            let maxIn = -Infinity;
+            let minInHum = Infinity;
+            let maxInHum = -Infinity;
+
             filteredLogs.forEach(entry => {
                 const pktDate = new Date(entry.date || entry.dateutc);
                 const timeStr = !isNaN(pktDate.getTime()) ? pktDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
@@ -1774,11 +2132,32 @@
                 const rawT = entry.tempf || 72;
                 tempData.push(Number((currentTempUnit === 'F' ? rawT : fToC(rawT)).toFixed(1)));
 
+                if (entry.tempinf !== undefined && entry.tempinf !== null) {
+                    const tIn = cleanNumber(entry.tempinf);
+                    if (tIn < minIn) minIn = tIn;
+                    if (tIn > maxIn) maxIn = tIn;
+                }
+
+                if (entry.humidityin !== undefined && entry.humidityin !== null) {
+                    const hIn = cleanNumber(entry.humidityin);
+                    if (hIn < minInHum) minInHum = hIn;
+                    if (hIn > maxInHum) maxInHum = hIn;
+                }
+
                 humData.push(Number((entry.humidity || 50).toFixed(1)));
 
                 const rawB = cleanNumber(entry.baromrelin || 29.92);
                 baroData.push(Number((currentBaroUnit === 'inhg' ? rawB : rawB * 33.8639).toFixed(currentBaroUnit === 'inhg' ? 2 : 1)));
             });
+
+            if (minIn !== Infinity && maxIn !== -Infinity) {
+                weatherData.inTempMin = minIn;
+                weatherData.inTempMax = maxIn;
+            }
+            if (minInHum !== Infinity && maxInHum !== -Infinity) {
+                weatherData.inHumMin = minInHum;
+                weatherData.inHumMax = maxInHum;
+            }
 
             if (windChart) {
                 windChart.data.labels = timeLabels;
@@ -1855,6 +2234,12 @@
                 weatherData.windAvgDeg = (weatherData.windAvgDeg * 0.9) + (weatherData.windDeg * 0.1);
 
                 weatherData.temp += (Math.random() * 0.2 - 0.1);
+                weatherData.inTemp += (Math.random() * 0.16 - 0.08);
+                weatherData.inTempMin = Math.min(weatherData.inTempMin, weatherData.inTemp);
+                weatherData.inTempMax = Math.max(weatherData.inTempMax, weatherData.inTemp);
+                weatherData.inHum = Math.min(100, Math.max(10, weatherData.inHum + (Math.random() * 0.6 - 0.3)));
+                weatherData.inHumMin = Math.min(weatherData.inHumMin, weatherData.inHum);
+                weatherData.inHumMax = Math.max(weatherData.inHumMax, weatherData.inHum);
                 weatherData.outHum = Math.min(100, Math.max(10, weatherData.outHum + (Math.random() * 0.6 - 0.3)));
                 weatherData.baroInhg += (Math.random() * 0.004 - 0.002);
                 weatherData.baroHpa = weatherData.baroInhg * 33.8639;
@@ -1866,6 +2251,30 @@
             }, 3000);
         }
 
+        async function fetchAmbientHistoricWithProxies(mac, apiKey, appKey, limit = 288) {
+            const cleanMac = mac.trim();
+            const historicUrl = `https://rt.ambientweather.net/v1/devices/${encodeURIComponent(cleanMac)}?applicationKey=${encodeURIComponent(appKey)}&apiKey=${encodeURIComponent(apiKey)}&limit=${limit}`;
+            const candidates = [
+                historicUrl,
+                `https://api.allorigins.win/get?url=${encodeURIComponent(historicUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(historicUrl)}`
+            ];
+
+            for (const url of candidates) {
+                try {
+                    const resp = await fetch(url);
+                    if (!resp.ok) continue;
+                    const json = await resp.json();
+                    if (Array.isArray(json)) return json;
+                    if (json && typeof json.contents === 'string') {
+                        const parsed = JSON.parse(json.contents);
+                        if (Array.isArray(parsed)) return parsed;
+                    }
+                } catch (e) {}
+            }
+            return null;
+        }
+
         window.forceFetchStation8HourHistory = async function() {
             const curSt = config.stations[config.activeStationIndex] || config.stations[0];
             if (!curSt || !curSt.apiKey || !curSt.appKey) {
@@ -1875,7 +2284,7 @@
             let targetMac = curSt.macAddress;
             try {
                 if (!targetMac) {
-                    const devUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=1`;
+                    const devUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${encodeURIComponent(curSt.appKey)}&apiKey=${encodeURIComponent(curSt.apiKey)}&limit=1`;
                     let devResp = await fetch(devUrl);
                     if (!devResp.ok) devResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(devUrl)}`);
                     if (devResp.ok) {
@@ -1887,19 +2296,15 @@
                 }
 
                 if (targetMac) {
-                    const historicUrl = `https://rt.ambientweather.net/v1/devices/${targetMac}?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=96`;
-                    let historicResp = await fetch(historicUrl);
-                    if (!historicResp.ok) {
-                        historicResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(historicUrl)}`);
-                    }
-                    if (historicResp.ok) {
-                        const histData = await historicResp.json();
-                        if (Array.isArray(histData) && histData.length > 0) {
-                            rawHistoricLogs = histData.reverse();
-                            updateChartsWithCurrentUnits();
-                            const lastTime = document.getElementById('last-update-time');
-                            if (lastTime) lastTime.innerText = '8H HISTORY SYNCED: ' + new Date().toLocaleTimeString();
-                        }
+                    const histData = await fetchAmbientHistoricWithProxies(targetMac, curSt.apiKey, curSt.appKey, 288);
+                    if (Array.isArray(histData) && histData.length > 0) {
+                        rawHistoricLogs = [...histData].reverse();
+                        updateChartsWithCurrentUnits();
+                        renderAllGauges();
+                        computeRainHistoryAndTrackerFromLogs(histData, histData[0]);
+                        renderRainView();
+                        const lastTime = document.getElementById('last-update-time');
+                        if (lastTime) lastTime.innerText = '8H HISTORY SYNCED: ' + new Date().toLocaleTimeString();
                     }
                 }
             } catch (e) {
@@ -1908,6 +2313,7 @@
         };
 
         async function fetchLocationLiveWeather(locQuery) {
+            resetRainTelemetryForStation();
             const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locQuery)}`);
             if (!geoRes.ok) throw new Error("Geocoding failed");
             const geoData = await geoRes.json();
@@ -1915,8 +2321,16 @@
 
             const lat = parseFloat(geoData[0].lat);
             const lon = parseFloat(geoData[0].lon);
+            stationCoords = { lat, lon };
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`;
+            const curSt = config.stations[config.activeStationIndex];
+            if (curSt) {
+                curSt.lat = lat;
+                curSt.lon = lon;
+                savePersistedPreferences();
+            }
+
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,rain&daily=temperature_2m_max,temperature_2m_min,rain_sum&past_days=7&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`;
             
             const wRes = await fetch(weatherUrl);
             if (!wRes.ok) throw new Error("Weather fetch failed");
@@ -1927,8 +2341,8 @@
                 weatherData.temp = cur.temperature_2m;
                 weatherData.feels = cur.apparent_temperature;
                 weatherData.dew = cur.temperature_2m - ((100 - cur.relative_humidity_2m) / 5);
-                weatherData.tempMax = wData.daily?.temperature_2m_max?.[0] || cur.temperature_2m + 4;
-                weatherData.tempMin = wData.daily?.temperature_2m_min?.[0] || cur.temperature_2m - 4;
+                weatherData.tempMax = wData.daily?.temperature_2m_max?.[7] || cur.temperature_2m + 4;
+                weatherData.tempMin = wData.daily?.temperature_2m_min?.[7] || cur.temperature_2m - 4;
                 
                 weatherData.windSpeed = cur.wind_speed_10m;
                 weatherData.windGust = cur.wind_speed_10m * 1.3;
@@ -1940,7 +2354,19 @@
                 const rawSp = cleanNumber(cur.surface_pressure);
                 weatherData.baroInhg = (rawSp ? rawSp / 33.8639 : 29.92);
                 weatherData.baroHpa = rawSp || 1013.2;
-                weatherData.rainRate = cur.precipitation || 0;
+
+                weatherData.rainRate = cleanNumber(cur.rain !== undefined ? cur.rain : cur.precipitation);
+                if (wData.daily && Array.isArray(wData.daily.rain_sum) && wData.daily.rain_sum.length >= 8) {
+                    const past7 = wData.daily.rain_sum.slice(0, 7).map(v => cleanNumber(v));
+                    const todayRain = cleanNumber(wData.daily.rain_sum[7]);
+                    weatherData.weeklyHistory = [...past7.slice(1), todayRain];
+                    weatherData.rainDaily = todayRain;
+                    weatherData.rainEvent = todayRain;
+                    weatherData.rainWeekly = past7.reduce((acc, v) => acc + v, 0);
+                    weatherData.rainMonthly = wData.daily.rain_sum.reduce((acc, v) => acc + cleanNumber(v), 0);
+                    weatherData.rainLastTimeStr = weatherData.rainRate > 0 ? "NOW" : (todayRain > 0 ? "Today" : "--");
+                    weatherData.dryStreakDays = (weatherData.rainRate > 0 || todayRain > 0) ? 0 : 7;
+                }
 
                 if (wData.hourly && wData.hourly.time) {
                     const times = wData.hourly.time.slice(-16);
@@ -1972,6 +2398,8 @@
 
                 renderAllGauges();
             }
+
+            await checkNwsAlerts({ lat, lon });
         }
 
         async function fetchLiveApiData() {
@@ -1990,13 +2418,14 @@
                     if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
                 } catch (err) {
                     if (statusText) statusText.innerText = 'Location Error';
-                    if (statusLed) statusLed.className = 'led-indicator led-red';
+                    if (statusLed) statusLed.className = 'led-indicator led-yellow';
+                    await checkNwsAlerts();
                 }
                 return;
             }
 
             try {
-                const targetUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=1`;
+                const targetUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${encodeURIComponent(curSt.appKey)}&apiKey=${encodeURIComponent(curSt.apiKey)}&limit=1`;
                 let data = null;
 
                 try {
@@ -2038,25 +2467,13 @@
                     if (!matchedDevice) matchedDevice = data[0];
 
                     const activeMac = matchedDevice.mac || matchedDevice.macAddress || targetMac;
+                    resetRainTelemetryForStation();
 
-                    // Fetch real historic logs directly from Ambient API historic endpoint with proxy routing
-                    if (activeMac) {
-                        try {
-                            const historicUrl = `https://rt.ambientweather.net/v1/devices/${activeMac}?applicationKey=${curSt.appKey}&apiKey=${curSt.apiKey}&limit=96`;
-                            let historicResp = await fetch(historicUrl);
-                            if (!historicResp.ok) {
-                                historicResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(historicUrl)}`);
-                            }
-                            if (historicResp.ok) {
-                                const histData = await historicResp.json();
-                                if (Array.isArray(histData) && histData.length > 0) {
-                                    rawHistoricLogs = histData.reverse(); // Chronological order
-                                    updateChartsWithCurrentUnits();
-                                }
-                            }
-                        } catch (histErr) {
-                            console.warn("Historic fetch fallback warning:", histErr);
-                        }
+                    const devCoords = matchedDevice?.info?.coords || matchedDevice?.lastData?.coords;
+                    if (devCoords && Number.isFinite(Number(devCoords.lat)) && Number.isFinite(Number(devCoords.lon))) {
+                        stationCoords = { lat: Number(devCoords.lat), lon: Number(devCoords.lon) };
+                    } else if (Number.isFinite(Number(curSt.lat)) && Number.isFinite(Number(curSt.lon))) {
+                        stationCoords = { lat: Number(curSt.lat), lon: Number(curSt.lon) };
                     }
 
                     const lastData = matchedDevice?.lastData;
@@ -2074,25 +2491,12 @@
                         weatherData.baroInhg = cleanNumber(lastData.baromrelin || 29.92);
                         weatherData.baroHpa = cleanNumber(lastData.baroHpa || (weatherData.baroInhg * 33.8639));
 
-                        weatherData.rainRate = lastData.hourlyrainin || 0;
-                        weatherData.rainEvent = lastData.eventrainin || 0;
-                        weatherData.rainDaily = lastData.dailyrainin || 0;
-                        weatherData.rainWeekly = lastData.weeklyrainin || 0;
-                        weatherData.rainMonthly = lastData.monthlyrainin || 0;
-
-                        if (lastData.lastRain) {
-                            const rainDate = new Date(lastData.lastRain);
-                            if (!isNaN(rainDate.getTime())) {
-                                const isToday = rainDate.toDateString() === new Date().toDateString();
-                                const timeStr = rainDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                                weatherData.rainLastTimeStr = isToday ? timeStr : `${rainDate.getMonth() + 1}/${rainDate.getDate()} ${timeStr}`;
-                            }
-                        } else if (lastData.date) {
-                            const pktDate = new Date(lastData.date);
-                            if (!isNaN(pktDate.getTime()) && weatherData.rainDaily > 0) {
-                                weatherData.rainLastTimeStr = pktDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                            }
-                        }
+                        weatherData.rainRate = cleanNumber(lastData.hourlyrainin);
+                        weatherData.rainEvent = cleanNumber(lastData.eventrainin);
+                        weatherData.rainDaily = cleanNumber(lastData.dailyrainin);
+                        weatherData.rainWeekly = cleanNumber(lastData.weeklyrainin);
+                        weatherData.rainMonthly = cleanNumber(lastData.monthlyrainin);
+                        weatherData.rainYearly = cleanNumber(lastData.yearlyrainin);
 
                         weatherData.solar = lastData.solarradiation || 0;
                         weatherData.uv = lastData.uv || 0;
@@ -2100,14 +2504,33 @@
                         weatherData.inTemp = lastData.tempinf || 0;
                         weatherData.inHum = lastData.humidityin || 0;
                         weatherData.outHum = lastData.humidity || 0;
-
-                        renderAllGauges();
-                        maybePushChartData();
-                        if (statusText) statusText.innerText = 'Ambient API (Live)';
-                        if (statusLed) statusLed.className = 'led-indicator led-green';
-                        const lastTime = document.getElementById('last-update-time');
-                        if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
                     }
+
+                    if (activeMac) {
+                        try {
+                            const histData = await fetchAmbientHistoricWithProxies(activeMac, curSt.apiKey, curSt.appKey, 288);
+                            if (Array.isArray(histData) && histData.length > 0) {
+                                rawHistoricLogs = [...histData].reverse();
+                                updateChartsWithCurrentUnits();
+                                computeRainHistoryAndTrackerFromLogs(histData, lastData);
+                            } else {
+                                computeRainHistoryAndTrackerFromLogs([], lastData);
+                            }
+                        } catch (histErr) {
+                            console.warn("Historic fetch fallback warning:", histErr);
+                            computeRainHistoryAndTrackerFromLogs([], lastData);
+                        }
+                    } else {
+                        computeRainHistoryAndTrackerFromLogs([], lastData);
+                    }
+
+                    renderAllGauges();
+                    maybePushChartData();
+                    await checkNwsAlerts(stationCoords);
+                    if (statusText) statusText.innerText = 'Ambient API (Live)';
+                    if (statusLed) statusLed.className = 'led-indicator led-green';
+                    const lastTime = document.getElementById('last-update-time');
+                    if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
                 } else {
                     throw new Error("No valid data returned from API");
                 }
@@ -2115,6 +2538,7 @@
                 console.warn('API Fetch warning:', err);
                 if (statusText) statusText.innerText = 'API Error (Demo)';
                 if (statusLed) statusLed.className = 'led-indicator led-yellow';
+                await checkNwsAlerts();
             }
         }
 
@@ -2129,6 +2553,7 @@
                 if (statusText) statusText.innerText = 'Simulated Data';
                 if (statusLed) statusLed.className = 'led-indicator led-green';
                 if (updateInterval) clearInterval(updateInterval);
+                checkNwsAlerts();
             } else {
                 if (btnText) btnText.innerText = 'Demo Mode: OFF';
                 fetchLiveApiData();
@@ -2151,6 +2576,8 @@
             config.stations.push({
                 name: "New Weather Station",
                 location: "",
+                lat: null,
+                lon: null,
                 macAddress: "",
                 apiKey: "",
                 appKey: "",
@@ -2166,6 +2593,9 @@
             populateStationDropdown();
             loadActiveStationIntoForm();
             savePersistedPreferences();
+            resetRainTelemetryForStation();
+            renderRainView();
+            checkNwsAlerts();
             window.forceFetchStation8HourHistory();
         };
 
@@ -2175,6 +2605,9 @@
             if (selectEl) {
                 config.activeStationIndex = parseInt(selectEl.value);
                 loadActiveStationIntoForm();
+                resetRainTelemetryForStation();
+                renderRainView();
+                checkNwsAlerts();
                 window.forceFetchStation8HourHistory();
             }
             savePersistedPreferences();
@@ -2189,6 +2622,9 @@
             populateStationDropdown();
             loadActiveStationIntoForm();
             savePersistedPreferences();
+            resetRainTelemetryForStation();
+            renderRainView();
+            checkNwsAlerts();
             window.forceFetchStation8HourHistory();
         };
 
@@ -2222,8 +2658,15 @@
             const gaugeScaleVal = parseInt(document.getElementById('setting-gauge-scale')?.value || '240');
             const refreshVal = parseInt(document.getElementById('setting-refresh-interval')?.value || '15000');
 
+            const prevLoc = config.stations[idx].location;
+            const newLoc = locVal || "Interlachen, FL";
+            if (prevLoc && prevLoc.trim().toLowerCase() !== newLoc.trim().toLowerCase()) {
+                config.stations[idx].lat = null;
+                config.stations[idx].lon = null;
+            }
+
             config.stations[idx].name = nameVal || "KD4BEE WX";
-            config.stations[idx].location = locVal || "Interlachen, FL";
+            config.stations[idx].location = newLoc;
             config.stations[idx].macAddress = macVal || "";
             config.stations[idx].apiKey = apiVal || "";
             config.stations[idx].appKey = appVal || "";
@@ -2290,6 +2733,8 @@
                 window.forceFetchStation8HourHistory();
                 if (updateInterval) clearInterval(updateInterval);
                 updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
+            } else {
+                checkNwsAlerts();
             }
         };
 
