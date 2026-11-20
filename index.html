@@ -1813,12 +1813,18 @@
                 windUnitLabel = 'KTS';
             }
 
+            const windZones = [
+                { from: 0, to: windMaxGauge * 0.36, color: '#00ff66' },
+                { from: windMaxGauge * 0.36, to: windMaxGauge * 0.72, color: '#ffee00' },
+                { from: windMaxGauge * 0.72, to: windMaxGauge, color: '#ff3355' }
+            ];
+
             drawGaugeDial(
                 'gauge-wind-speed', 
                 displayWindSpeed, 
                 0, windMaxGauge, 
                 'WIND', windUnitLabel,
-                null,
+                windZones,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
@@ -1841,12 +1847,26 @@
             const minTemp = currentTempUnit === 'F' ? -10 : -20;
             const maxTemp = currentTempUnit === 'F' ? 110 : 45;
 
+            const tempZones = currentTempUnit === 'F'
+                ? [
+                    { from: -10, to: 20, color: '#00f0ff' },
+                    { from: 20, to: 50, color: '#00ff66' },
+                    { from: 50, to: 80, color: '#ffee00' },
+                    { from: 80, to: 110, color: '#ff3355' }
+                  ]
+                : [
+                    { from: -20, to: -5, color: '#00f0ff' },
+                    { from: -5, to: 10, color: '#00ff66' },
+                    { from: 10, to: 27, color: '#ffee00' },
+                    { from: 27, to: 45, color: '#ff3355' }
+                  ];
+
             drawGaugeDial(
                 'gauge-temp',
                 displayTemp,
                 minTemp, maxTemp,
                 'TEMP', '°' + currentTempUnit,
-                null,
+                tempZones,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
@@ -1859,12 +1879,19 @@
             const elTempMinMax = document.getElementById('val-temp-minmax');
             if (elTempMinMax) elTempMinMax.innerText = `${formatNoComma(displayTempMin, 1)}° / ${formatNoComma(displayTempMax, 1)}°`;
 
+            const humZones = [
+                { from: 0, to: 30, color: '#ffee00' },
+                { from: 30, to: 70, color: '#00ff66' },
+                { from: 70, to: 85, color: '#00f0ff' },
+                { from: 85, to: 100, color: '#ff3355' }
+            ];
+
             drawGaugeDial(
                 'gauge-out-hum',
                 weatherData.outHum,
                 0, 100,
                 'HUM', '%',
-                null,
+                humZones,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
@@ -1874,7 +1901,7 @@
                 displayInTemp,
                 minTemp, maxTemp,
                 'IN TEMP', '°' + currentTempUnit,
-                null,
+                tempZones,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
@@ -1883,7 +1910,7 @@
                 weatherData.inHum,
                 0, 100,
                 'IN HUM', '%',
-                null,
+                humZones,
                 { needleColor: '#00f0ff', tickCount: 5 }
             );
 
@@ -1906,23 +1933,33 @@
             const elBaroRange = document.getElementById('val-baro-range');
 
             if (currentBaroUnit === 'inhg') {
+                const baroInhgZones = [
+                    { from: 28.5, to: 29.6, color: '#ff3355' },
+                    { from: 29.6, to: 30.2, color: '#00ff66' },
+                    { from: 30.2, to: 31.5, color: '#00f0ff' }
+                ];
                 drawGaugeDial(
                     'gauge-baro',
                     weatherData.baroInhg,
                     28.5, 31.5,
                     'BARO', 'inHg',
-                    null,
+                    baroInhgZones,
                     { needleColor: '#00f0ff', tickCount: 6, valDecimals: 2, digitalYOffset: 0.30 }
                 );
                 if (elBaroSlp) elBaroSlp.innerText = `${formatNoComma(weatherData.baroInhg, 2)} inHg`;
                 if (elBaroRange) elBaroRange.innerText = `+0.01 inHg`;
             } else {
+                const baroHpaZones = [
+                    { from: 965, to: 1000, color: '#ff3355' },
+                    { from: 1000, to: 1022, color: '#00ff66' },
+                    { from: 1022, to: 1065, color: '#00f0ff' }
+                ];
                 drawGaugeDial(
                     'gauge-baro',
                     weatherData.baroHpa,
                     965, 1065,
                     'BARO', 'hPa',
-                    null,
+                    baroHpaZones,
                     { needleColor: '#00f0ff', tickCount: 5, valDecimals: 1, digitalYOffset: 0.30 }
                 );
                 if (elBaroSlp) elBaroSlp.innerText = `${formatNoComma(weatherData.baroHpa, 1)} hPa`;
@@ -2123,24 +2160,58 @@
             });
         }
 
+        function getEntryTimestampMs(entry) {
+            if (!entry) return NaN;
+            if (typeof entry.dateutc === 'number' && !isNaN(entry.dateutc)) {
+                return entry.dateutc > 1e12 ? entry.dateutc : entry.dateutc * 1000;
+            }
+            if (typeof entry.dateutc === 'string' && entry.dateutc.trim() !== '' && !isNaN(Number(entry.dateutc))) {
+                const n = Number(entry.dateutc);
+                return n > 1e12 ? n : n * 1000;
+            }
+            if (entry.date) {
+                const t = new Date(entry.date).getTime();
+                if (!isNaN(t)) return t;
+            }
+            return NaN;
+        }
+
         function processHistoricLogsFor8Hours30Min(logs) {
-            const now = Date.now();
-            const eightHoursAgo = now - (8 * 60 * 60 * 1000);
-            const recentLogs = logs.filter(entry => {
-                const t = new Date(entry.date || entry.dateutc).getTime();
-                return !isNaN(t) && t >= eightHoursAgo && t <= now;
+            if (!Array.isArray(logs) || logs.length === 0) return [];
+            const sorted = [...logs].sort((a, b) => {
+                const ta = getEntryTimestampMs(a);
+                const tb = getEntryTimestampMs(b);
+                if (isNaN(ta) && isNaN(tb)) return 0;
+                if (isNaN(ta)) return -1;
+                if (isNaN(tb)) return 1;
+                return ta - tb;
             });
-            
+
+            const validTimes = sorted.map(getEntryTimestampMs).filter(t => !isNaN(t));
+            const anchorTime = validTimes.length > 0 ? Math.max(Date.now(), validTimes[validTimes.length - 1]) : Date.now();
+            const eightHoursAgo = anchorTime - (8 * 60 * 60 * 1000);
+
+            const recentLogs = sorted.filter(entry => {
+                const t = getEntryTimestampMs(entry);
+                return !isNaN(t) && t >= eightHoursAgo && t <= anchorTime + (5 * 60 * 1000);
+            });
+            const sourceLogs = recentLogs.length > 0 ? recentLogs : sorted;
+
             const sampled = [];
             let lastTimeMark = 0;
-            recentLogs.forEach(entry => {
-                const t = new Date(entry.date || entry.dateutc).getTime();
-                if (sampled.length === 0 || (t - lastTimeMark) >= (28 * 60 * 1000)) {
+            sourceLogs.forEach(entry => {
+                const t = getEntryTimestampMs(entry);
+                if (sampled.length === 0 || isNaN(t) || (t - lastTimeMark) >= (25 * 60 * 1000)) {
                     sampled.push(entry);
-                    lastTimeMark = t;
+                    if (!isNaN(t)) lastTimeMark = t;
                 }
             });
-            return sampled.slice(-maxChartHistory);
+
+            const result = (sampled.length > 0 ? sampled : sourceLogs).slice(-maxChartHistory);
+            if (result.length < 2 && sourceLogs.length >= 2) {
+                return sourceLogs.slice(-maxChartHistory);
+            }
+            return result;
         }
 
         function updateChartsWithCurrentUnits() {
@@ -2160,7 +2231,8 @@
             let maxInHum = -Infinity;
 
             filteredLogs.forEach(entry => {
-                const pktDate = new Date(entry.date || entry.dateutc);
+                const pktMs = getEntryTimestampMs(entry);
+                const pktDate = new Date(pktMs);
                 const timeStr = !isNaN(pktDate.getTime()) ? pktDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                 timeLabels.push(timeStr);
 
@@ -2310,7 +2382,7 @@
 
             for (const url of candidates) {
                 try {
-                    const resp = await fetchWithTimeout(url, {}, 4500);
+                    const resp = await fetchWithTimeout(url, {}, 9000);
                     if (!resp.ok) continue;
                     const json = await resp.json();
                     if (Array.isArray(json)) return json;
@@ -2323,19 +2395,19 @@
             return null;
         }
 
-        window.forceFetchStation8HourHistory = async function() {
-            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
-            if (!curSt || !curSt.apiKey || !curSt.appKey) {
-                return;
+        async function runStation8HourHistorySync(curSt = null, fallbackLatestPacket = null, updateSyncedBadge = false) {
+            const targetStation = curSt || config.stations[config.activeStationIndex] || config.stations[0];
+            if (!targetStation || !targetStation.apiKey || !targetStation.appKey) {
+                return false;
             }
 
-            let targetMac = curSt.macAddress;
+            let targetMac = targetStation.macAddress;
             try {
                 if (!targetMac) {
-                    const devUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${encodeURIComponent(curSt.appKey)}&apiKey=${encodeURIComponent(curSt.apiKey)}&limit=1`;
-                    let devResp = await fetch(devUrl);
-                    if (!devResp.ok) devResp = await fetch(`https://corsproxy.io/?${encodeURIComponent(devUrl)}`);
-                    if (devResp.ok) {
+                    const devUrl = `https://rt.ambientweather.net/v1/devices?applicationKey=${encodeURIComponent(targetStation.appKey)}&apiKey=${encodeURIComponent(targetStation.apiKey)}&limit=1`;
+                    let devResp = await fetchWithTimeout(devUrl, {}, 8000);
+                    if (!devResp || !devResp.ok) devResp = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(devUrl)}`, {}, 8000);
+                    if (devResp && devResp.ok) {
                         const devData = await devResp.json();
                         if (Array.isArray(devData) && devData.length > 0) {
                             targetMac = devData[0].mac || devData[0].macAddress;
@@ -2344,20 +2416,37 @@
                 }
 
                 if (targetMac) {
-                    const histData = await fetchAmbientHistoricWithProxies(targetMac, curSt.apiKey, curSt.appKey, 288);
+                    const histData = await fetchAmbientHistoricWithProxies(targetMac, targetStation.apiKey, targetStation.appKey, 288);
                     if (Array.isArray(histData) && histData.length > 0) {
-                        rawHistoricLogs = [...histData].reverse();
+                        rawHistoricLogs = [...histData].sort((a, b) => {
+                            const ta = getEntryTimestampMs(a);
+                            const tb = getEntryTimestampMs(b);
+                            if (isNaN(ta) && isNaN(tb)) return 0;
+                            if (isNaN(ta)) return -1;
+                            if (isNaN(tb)) return 1;
+                            return ta - tb;
+                        });
                         updateChartsWithCurrentUnits();
                         renderAllGauges();
-                        computeRainHistoryAndTrackerFromLogs(histData, histData[0]);
+                        computeRainHistoryAndTrackerFromLogs(histData, fallbackLatestPacket || histData[0]);
                         renderRainView();
-                        const lastTime = document.getElementById('last-update-time');
-                        if (lastTime) lastTime.innerText = '8H HISTORY SYNCED: ' + new Date().toLocaleTimeString();
+                        saveStationCache(targetStation);
+                        if (updateSyncedBadge) {
+                            const lastTime = document.getElementById('last-update-time');
+                            if (lastTime) lastTime.innerText = '8H HISTORY SYNCED: ' + new Date().toLocaleTimeString();
+                        }
+                        return true;
                     }
                 }
             } catch (e) {
                 console.warn("Failed to fetch 8H history", e);
             }
+            return false;
+        }
+
+        window.forceFetchStation8HourHistory = async function() {
+            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+            await runStation8HourHistorySync(curSt, null, true);
         };
 
         async function fetchLocationLiveWeather(locQuery) {
@@ -2574,24 +2663,15 @@
                     if (activeMac && shouldFetchHistory) {
                         lastHistoricStationKey = stationKey;
                         lastHistoricFetchTime = now;
-                        fetchAmbientHistoricWithProxies(activeMac, curSt.apiKey, curSt.appKey, 96)
-                            .then(histData => {
-                                if (Array.isArray(histData) && histData.length > 0) {
-                                    rawHistoricLogs = [...histData].reverse();
-                                    updateChartsWithCurrentUnits();
-                                    computeRainHistoryAndTrackerFromLogs(histData, lastData);
-                                    renderAllGauges();
-                                } else {
-                                    computeRainHistoryAndTrackerFromLogs([], lastData);
-                                    renderRainView();
-                                }
-                                saveStationCache(curSt);
-                            })
-                            .catch(() => {
+                        const stationWithMac = { ...curSt, macAddress: activeMac };
+                        runStation8HourHistorySync(stationWithMac, lastData, false).then(synced => {
+                            if (!synced) {
+                                pushChartData();
                                 computeRainHistoryAndTrackerFromLogs([], lastData);
                                 renderRainView();
                                 saveStationCache(curSt);
-                            });
+                            }
+                        });
                     } else {
                         maybePushChartData();
                         saveStationCache(curSt);
@@ -2650,7 +2730,9 @@
 
             resetRainTelemetryForStation();
             rawHistoricLogs = [];
-            loadStationCache(curSt);
+            if (!forceHistory) {
+                loadStationCache(curSt);
+            }
 
             renderAllGauges();
             if (rawHistoricLogs.length > 0) {
@@ -2806,6 +2888,8 @@
 
         function initDashboardApp() {
             loadPersistedPreferences();
+            lastHistoricFetchTime = 0;
+            lastHistoricStationKey = "";
             initClocks();
             initCharts();
             applyPaneDisplayModes();
