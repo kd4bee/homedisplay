@@ -686,8 +686,56 @@
         }
 
         let timeOffsetMs = 0;
-        let refreshIntervalMs = 16000;
+        let refreshIntervalMs = 15000;
         let isSimulation = false;
+        let activeFetchController = null;
+        let lastHistoricFetchTime = 0;
+        let lastHistoricStationKey = "";
+
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                return response;
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        function getStationCacheKey(st) {
+            const id = (st && (st.macAddress || st.name || st.location)) || "default";
+            return "christy_wx_cache_" + id.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
+        }
+
+        function saveStationCache(st) {
+            try {
+                const key = getStationCacheKey(st);
+                const payload = {
+                    ts: Date.now(),
+                    weatherData: weatherData,
+                    rawHistoricLogs: rawHistoricLogs.slice(-64)
+                };
+                localStorage.setItem(key, JSON.stringify(payload));
+            } catch (e) {}
+        }
+
+        function loadStationCache(st) {
+            try {
+                const key = getStationCacheKey(st);
+                const raw = localStorage.getItem(key);
+                if (!raw) return false;
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.weatherData) {
+                    Object.assign(weatherData, parsed.weatherData);
+                    if (Array.isArray(parsed.rawHistoricLogs) && parsed.rawHistoricLogs.length > 0) {
+                        rawHistoricLogs = parsed.rawHistoricLogs;
+                    }
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
         let updateInterval = null;
         let digitalFontSize = 40;
         let gaugeScaleSize = 240;
@@ -2251,18 +2299,18 @@
             }, 3000);
         }
 
-        async function fetchAmbientHistoricWithProxies(mac, apiKey, appKey, limit = 288) {
+        async function fetchAmbientHistoricWithProxies(mac, apiKey, appKey, limit = 96) {
             const cleanMac = mac.trim();
             const historicUrl = `https://rt.ambientweather.net/v1/devices/${encodeURIComponent(cleanMac)}?applicationKey=${encodeURIComponent(appKey)}&apiKey=${encodeURIComponent(apiKey)}&limit=${limit}`;
             const candidates = [
                 historicUrl,
-                `https://api.allorigins.win/get?url=${encodeURIComponent(historicUrl)}`,
-                `https://corsproxy.io/?${encodeURIComponent(historicUrl)}`
+                `https://corsproxy.io/?${encodeURIComponent(historicUrl)}`,
+                `https://api.allorigins.win/get?url=${encodeURIComponent(historicUrl)}`
             ];
 
             for (const url of candidates) {
                 try {
-                    const resp = await fetch(url);
+                    const resp = await fetchWithTimeout(url, {}, 4500);
                     if (!resp.ok) continue;
                     const json = await resp.json();
                     if (Array.isArray(json)) return json;
@@ -2402,16 +2450,18 @@
             await checkNwsAlerts({ lat, lon });
         }
 
-        async function fetchLiveApiData() {
+        async function fetchLiveApiData(forceHistory = false) {
             if (isSimulation) return;
 
             const curSt = config.stations[config.activeStationIndex] || config.stations[0];
             const statusText = document.getElementById('sync-source-badge');
             const statusLed = document.getElementById('status-led');
+            const stationKey = getStationCacheKey(curSt);
 
             if (!curSt.apiKey || curSt.apiKey.trim() === "") {
                 try {
                     await fetchLocationLiveWeather(curSt.location || curSt.name);
+                    saveStationCache(curSt);
                     if (statusText) statusText.innerText = 'Location (Live)';
                     if (statusLed) statusLed.className = 'led-indicator led-green';
                     const lastTime = document.getElementById('last-update-time');
@@ -2419,7 +2469,7 @@
                 } catch (err) {
                     if (statusText) statusText.innerText = 'Location Error';
                     if (statusLed) statusLed.className = 'led-indicator led-yellow';
-                    await checkNwsAlerts();
+                    checkNwsAlerts();
                 }
                 return;
             }
@@ -2429,26 +2479,26 @@
                 let data = null;
 
                 try {
-                    const response = await fetch(targetUrl);
+                    const response = await fetchWithTimeout(targetUrl, {}, 4000);
                     if (response.ok) data = await response.json();
                 } catch(e){}
 
                 if (!data) {
                     try {
-                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-                        const response = await fetch(proxyUrl);
-                        if (response.ok) {
-                            const wrapper = await response.json();
-                            if (wrapper.contents) data = JSON.parse(wrapper.contents);
-                        }
+                        const proxyUrl2 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                        const response = await fetchWithTimeout(proxyUrl2, {}, 4500);
+                        if (response.ok) data = await response.json();
                     } catch(e){}
                 }
 
                 if (!data) {
                     try {
-                        const proxyUrl2 = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-                        const response = await fetch(proxyUrl2);
-                        if (response.ok) data = await response.json();
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                        const response = await fetchWithTimeout(proxyUrl, {}, 4500);
+                        if (response.ok) {
+                            const wrapper = await response.json();
+                            if (wrapper.contents) data = JSON.parse(wrapper.contents);
+                        }
                     } catch(e){}
                 }
 
@@ -2467,7 +2517,6 @@
                     if (!matchedDevice) matchedDevice = data[0];
 
                     const activeMac = matchedDevice.mac || matchedDevice.macAddress || targetMac;
-                    resetRainTelemetryForStation();
 
                     const devCoords = matchedDevice?.info?.coords || matchedDevice?.lastData?.coords;
                     if (devCoords && Number.isFinite(Number(devCoords.lat)) && Number.isFinite(Number(devCoords.lon))) {
@@ -2506,31 +2555,47 @@
                         weatherData.outHum = lastData.humidity || 0;
                     }
 
-                    if (activeMac) {
-                        try {
-                            const histData = await fetchAmbientHistoricWithProxies(activeMac, curSt.apiKey, curSt.appKey, 288);
-                            if (Array.isArray(histData) && histData.length > 0) {
-                                rawHistoricLogs = [...histData].reverse();
-                                updateChartsWithCurrentUnits();
-                                computeRainHistoryAndTrackerFromLogs(histData, lastData);
-                            } else {
-                                computeRainHistoryAndTrackerFromLogs([], lastData);
-                            }
-                        } catch (histErr) {
-                            console.warn("Historic fetch fallback warning:", histErr);
-                            computeRainHistoryAndTrackerFromLogs([], lastData);
-                        }
-                    } else {
-                        computeRainHistoryAndTrackerFromLogs([], lastData);
-                    }
-
+                    // Render live gauges immediately without waiting for history or NWS alerts
                     renderAllGauges();
-                    maybePushChartData();
-                    await checkNwsAlerts(stationCoords);
                     if (statusText) statusText.innerText = 'Ambient API (Live)';
                     if (statusLed) statusLed.className = 'led-indicator led-green';
                     const lastTime = document.getElementById('last-update-time');
                     if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
+
+                    // Run NWS alerts in background without blocking UI
+                    checkNwsAlerts(stationCoords);
+
+                    // Fetch 8-hour history on first load, station change, manual sync, or every 5 minutes
+                    const now = Date.now();
+                    const shouldFetchHistory = forceHistory ||
+                        lastHistoricStationKey !== stationKey ||
+                        (now - lastHistoricFetchTime) >= (5 * 60 * 1000);
+
+                    if (activeMac && shouldFetchHistory) {
+                        lastHistoricStationKey = stationKey;
+                        lastHistoricFetchTime = now;
+                        fetchAmbientHistoricWithProxies(activeMac, curSt.apiKey, curSt.appKey, 96)
+                            .then(histData => {
+                                if (Array.isArray(histData) && histData.length > 0) {
+                                    rawHistoricLogs = [...histData].reverse();
+                                    updateChartsWithCurrentUnits();
+                                    computeRainHistoryAndTrackerFromLogs(histData, lastData);
+                                    renderAllGauges();
+                                } else {
+                                    computeRainHistoryAndTrackerFromLogs([], lastData);
+                                    renderRainView();
+                                }
+                                saveStationCache(curSt);
+                            })
+                            .catch(() => {
+                                computeRainHistoryAndTrackerFromLogs([], lastData);
+                                renderRainView();
+                                saveStationCache(curSt);
+                            });
+                    } else {
+                        maybePushChartData();
+                        saveStationCache(curSt);
+                    }
                 } else {
                     throw new Error("No valid data returned from API");
                 }
@@ -2538,7 +2603,7 @@
                 console.warn('API Fetch warning:', err);
                 if (statusText) statusText.innerText = 'API Error (Demo)';
                 if (statusLed) statusLed.className = 'led-indicator led-yellow';
-                await checkNwsAlerts();
+                checkNwsAlerts();
             }
         }
 
@@ -2570,6 +2635,37 @@
             }, 300);
         };
 
+        function applyActiveStationToDashboard(forceHistory = true) {
+            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+            if (!curSt) return;
+
+            currentTempUnit = curSt.tempUnit || 'F';
+            currentBaroUnit = curSt.baroUnit || 'hpa';
+            currentWindUnit = curSt.windUnit || 'mph';
+            currentRainUnit = curSt.rainUnit || 'in';
+            refreshIntervalMs = curSt.refreshInterval || 15000;
+
+            setDigitalFontSize(curSt.digitalFontSize || 40);
+            setGaugeScale(curSt.gaugeScale || 240);
+
+            resetRainTelemetryForStation();
+            rawHistoricLogs = [];
+            loadStationCache(curSt);
+
+            renderAllGauges();
+            if (rawHistoricLogs.length > 0) {
+                updateChartsWithCurrentUnits();
+            }
+
+            if (!isSimulation) {
+                fetchLiveApiData(forceHistory);
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(() => fetchLiveApiData(false), refreshIntervalMs);
+            } else {
+                checkNwsAlerts();
+            }
+        }
+
         window.addNewStation = function() {
             saveFormToCurrentStationIndex();
             const newIndex = config.stations.length;
@@ -2593,10 +2689,7 @@
             populateStationDropdown();
             loadActiveStationIntoForm();
             savePersistedPreferences();
-            resetRainTelemetryForStation();
-            renderRainView();
-            checkNwsAlerts();
-            window.forceFetchStation8HourHistory();
+            applyActiveStationToDashboard(true);
         };
 
         window.onStationDropdownChange = function() {
@@ -2605,12 +2698,9 @@
             if (selectEl) {
                 config.activeStationIndex = parseInt(selectEl.value);
                 loadActiveStationIntoForm();
-                resetRainTelemetryForStation();
-                renderRainView();
-                checkNwsAlerts();
-                window.forceFetchStation8HourHistory();
+                savePersistedPreferences();
+                applyActiveStationToDashboard(true);
             }
-            savePersistedPreferences();
         };
 
         window.deleteCurrentStation = function() {
@@ -2622,10 +2712,7 @@
             populateStationDropdown();
             loadActiveStationIntoForm();
             savePersistedPreferences();
-            resetRainTelemetryForStation();
-            renderRainView();
-            checkNwsAlerts();
-            window.forceFetchStation8HourHistory();
+            applyActiveStationToDashboard(true);
         };
 
         function populateStationDropdown() {
@@ -2712,55 +2799,25 @@
 
         window.saveStationSettings = function() {
             saveFormToCurrentStationIndex();
-            const curSt = config.stations[config.activeStationIndex];
-
-            if (curSt) {
-                currentTempUnit = curSt.tempUnit;
-                currentBaroUnit = curSt.baroUnit;
-                currentWindUnit = curSt.windUnit;
-                currentRainUnit = curSt.rainUnit;
-                refreshIntervalMs = curSt.refreshInterval;
-
-                setDigitalFontSize(curSt.digitalFontSize || 40);
-                setGaugeScale(curSt.gaugeScale || 240);
-            }
-
             savePersistedPreferences();
             window.closeConfigModal();
-
-            if (!isSimulation) {
-                fetchLiveApiData();
-                window.forceFetchStation8HourHistory();
-                if (updateInterval) clearInterval(updateInterval);
-                updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
-            } else {
-                checkNwsAlerts();
-            }
+            applyActiveStationToDashboard(true);
         };
 
-        window.onload = function() {
+        function initDashboardApp() {
             loadPersistedPreferences();
-            const curSt = config.stations[config.activeStationIndex] || config.stations[0];
-            if (curSt) {
-                currentTempUnit = curSt.tempUnit || 'F';
-                currentBaroUnit = curSt.baroUnit || 'hpa';
-                currentWindUnit = curSt.windUnit || 'mph';
-                currentRainUnit = curSt.rainUnit || 'in';
-                refreshIntervalMs = curSt.refreshInterval || 15000;
-                setDigitalFontSize(curSt.digitalFontSize || 40);
-                setGaugeScale(curSt.gaugeScale || 240);
-            }
-
             initClocks();
             initCharts();
             applyPaneDisplayModes();
-            renderAllGauges();
             startSimulationLoop();
+            applyActiveStationToDashboard(true);
+        }
 
-            fetchLiveApiData();
-            window.forceFetchStation8HourHistory();
-            updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
-        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDashboardApp);
+        } else {
+            initDashboardApp();
+        }
     </script>
 </body>
 </html>
