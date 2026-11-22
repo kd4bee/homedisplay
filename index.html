@@ -9,7 +9,7 @@
     <!-- Robust PWA Manifest & External Icon Links for Android/iOS Home Screen Shortcuts -->
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
-    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Christy\'s Weather Station","short_name":"Christy WX","start_url":".","display":"standalone","background_color":"%230e131d","theme_color":"%230e131d","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1163/1163624.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Christy%27s Weather Station","short_name":"Christy WX","start_url":".","display":"standalone","background_color":"%230e131d","theme_color":"%230e131d","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1163/1163624.png","sizes":"512x512","type":"image/png"}]}'>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -663,27 +663,11 @@
     <!-- APPLICATION LOGIC & SERVICE WORKER -->
     <script>
         if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('install', (e) => {
-                    self.skipWaiting();
-                });
-                self.addEventListener('activate', (e) => {
-                    e.waitUntil(clients.claim());
-                });
-                self.addEventListener('fetch', (e) => {
-                    e.respondWith(
-                        caches.match(e.request).then((cachedResponse) => {
-                            return cachedResponse || fetch(e.request).catch(() => {});
-                        })
-                    );
-                });
-            `;
-            const swBlob = new Blob([swCode], { type: 'text/javascript' });
-            const swUrl = URL.createObjectURL(swBlob);
-            navigator.serviceWorker.register(swUrl).catch(err => {
-                console.warn("Service worker registration failed:", err);
-            });
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(r => r.unregister());
+            }).catch(() => {});
         }
+
 
         let timeOffsetMs = 0;
         let refreshIntervalMs = 15000;
@@ -2377,7 +2361,8 @@
             const candidates = [
                 historicUrl,
                 `https://corsproxy.io/?${encodeURIComponent(historicUrl)}`,
-                `https://api.allorigins.win/get?url=${encodeURIComponent(historicUrl)}`
+                `https://api.allorigins.win/get?url=${encodeURIComponent(historicUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(historicUrl)}`
             ];
 
             for (const url of candidates) {
@@ -2386,6 +2371,7 @@
                     if (!resp.ok) continue;
                     const json = await resp.json();
                     if (Array.isArray(json)) return json;
+                    if (json && Array.isArray(json.data)) return json.data;
                     if (json && typeof json.contents === 'string') {
                         const parsed = JSON.parse(json.contents);
                         if (Array.isArray(parsed)) return parsed;
@@ -2656,7 +2642,7 @@
 
                     // Fetch 8-hour history on first load, station change, manual sync, or every 5 minutes
                     const now = Date.now();
-                    const shouldFetchHistory = forceHistory ||
+                    const shouldFetchHistory = Boolean(forceHistory) ||
                         lastHistoricStationKey !== stationKey ||
                         (now - lastHistoricFetchTime) >= (5 * 60 * 1000);
 
@@ -2740,6 +2726,16 @@
             }
 
             if (!isSimulation) {
+                const hasKeys = Boolean(curSt && curSt.apiKey && curSt.apiKey.trim() && curSt.appKey && curSt.appKey.trim());
+                if (forceHistory && hasKeys) {
+                    lastHistoricStationKey = getStationCacheKey(curSt);
+                    lastHistoricFetchTime = Date.now();
+                    setTimeout(() => {
+                        if (!rawHistoricLogs || rawHistoricLogs.length === 0) {
+                            runStation8HourHistorySync(curSt, null, false);
+                        }
+                    }, 900);
+                }
                 fetchLiveApiData(forceHistory);
                 if (updateInterval) clearInterval(updateInterval);
                 updateInterval = setInterval(() => fetchLiveApiData(false), refreshIntervalMs);
@@ -2902,6 +2898,15 @@
         } else {
             initDashboardApp();
         }
+
+        window.addEventListener('pageshow', () => {
+            if (!isSimulation && (!rawHistoricLogs || rawHistoricLogs.length === 0)) {
+                const curSt = config.stations[config.activeStationIndex] || config.stations[0];
+                if (curSt && curSt.apiKey && curSt.appKey) {
+                    runStation8HourHistorySync(curSt, null, false);
+                }
+            }
+        });
     </script>
 </body>
 </html>
