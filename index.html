@@ -9,7 +9,7 @@
     <!-- Robust PWA Manifest & External Icon Links for Android/iOS Home Screen Shortcuts -->
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1163/1163624.png">
-    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Christy%27s Weather Station","short_name":"Christy WX","start_url":".","display":"standalone","background_color":"%230e131d","theme_color":"%230e131d","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1163/1163624.png","sizes":"512x512","type":"image/png"}]}'>
+    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"weather station Weather Station","short_name":"Christy WX","start_url":".","display":"standalone","background_color":"%230e131d","theme_color":"%230e131d","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/1163/1163624.png","sizes":"512x512","type":"image/png"}]}'>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -143,7 +143,11 @@
         </div>
 
         <!-- Controls / Actions -->
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <button id="briefing-btn" onclick="window.playSpeechBriefing()" title="Audio Weather Briefing" class="bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-200 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
+                <i class="fa-solid fa-volume-high text-cyan-300"></i>
+                <span>Briefing</span>
+            </button>
             <button id="toggle-sim-btn" onclick="window.toggleSimulation()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
                 <i class="fa-solid fa-flask text-cyan-300"></i>
                 <span id="sim-btn-text">Demo Mode: OFF</span>
@@ -640,7 +644,10 @@
                         </select>
                     </div>
 
-                    <div class="flex justify-end pt-1">
+                    <div class="flex justify-between items-center pt-1">
+                        <button type="button" onclick="window.testSevereWeatherAlert()" class="text-xs text-rose-400 hover:text-rose-300 transition cursor-pointer flex items-center gap-1 font-bold">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Test Severe Weather Alert
+                        </button>
                         <button type="button" onclick="window.deleteCurrentStation()" class="text-xs text-rose-400 hover:text-rose-300 transition cursor-pointer">
                             <i class="fa-solid fa-trash"></i> Delete This Station
                         </button>
@@ -689,7 +696,7 @@
 
         function getStationCacheKey(st) {
             const id = (st && (st.macAddress || st.name || st.location)) || "default";
-            return "christy_wx_cache_" + id.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
+            return "weather station_wx_cache_" + id.trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
         }
 
         function saveStationCache(st) {
@@ -746,6 +753,7 @@
         const chartUpdateIntervalMs = 30 * 60 * 1000;
 
         let activeNwsAlerts = [];
+        let isTestAlertActive = false;
         let stationCoords = { lat: 29.6236, lon: -81.8898 };
 
         function cleanNumber(val) {
@@ -821,14 +829,14 @@
 
         function loadPersistedPreferences() {
             try {
-                const savedConfig = localStorage.getItem('christy_wx_config');
+                const savedConfig = localStorage.getItem('weather station_wx_config');
                 if (savedConfig) {
                     const parsed = JSON.parse(savedConfig);
                     if (parsed.stations) config.stations = parsed.stations;
                     if (typeof parsed.activeStationIndex === 'number') config.activeStationIndex = parsed.activeStationIndex;
                 }
 
-                const savedPaneModes = localStorage.getItem('christy_wx_pane_modes');
+                const savedPaneModes = localStorage.getItem('weather station_wx_pane_modes');
                 if (savedPaneModes) {
                     paneModes = JSON.parse(savedPaneModes);
                 }
@@ -839,8 +847,8 @@
 
         function savePersistedPreferences() {
             try {
-                localStorage.setItem('christy_wx_config', JSON.stringify(config));
-                localStorage.setItem('christy_wx_pane_modes', JSON.stringify(paneModes));
+                localStorage.setItem('weather station_wx_config', JSON.stringify(config));
+                localStorage.setItem('weather station_wx_pane_modes', JSON.stringify(paneModes));
             } catch (e) {
                 console.warn("Could not save local storage preferences", e);
             }
@@ -1066,7 +1074,140 @@
             return stationCoords;
         }
 
+        function renderAlertsToPane() {
+            const alertPane = document.getElementById('nwsAlertPane');
+            const alertTitle = document.getElementById('nwsAlertTitle');
+            const alertCountBadge = document.getElementById('nwsAlertCountBadge');
+            const alertBannerLabel = document.getElementById('nwsAlertBannerLabel');
+
+            if (!alertPane || !alertTitle) return;
+
+            if (!activeNwsAlerts || activeNwsAlerts.length === 0) {
+                alertPane.classList.add('hidden');
+                return;
+            }
+
+            const primary = activeNwsAlerts[0];
+            const combinedMarquee = activeNwsAlerts.length > 1
+                ? activeNwsAlerts.map(a => `${a.event}: ${a.headline}`).join('   •••   ')
+                : primary.headline;
+
+            alertTitle.innerText = combinedMarquee;
+
+            if (alertBannerLabel) {
+                if (isTestAlertActive) {
+                    alertBannerLabel.innerText = `TEST NWS ${primary.event.toUpperCase()} • Tap for Preview Details`;
+                } else if (activeNwsAlerts.length > 1) {
+                    alertBannerLabel.innerText = `${activeNwsAlerts.length} Active NWS Alerts • Tap for Full Details`;
+                } else {
+                    alertBannerLabel.innerText = `Active NWS ${primary.event} • Tap for Details`;
+                }
+            }
+
+            if (alertCountBadge) {
+                if (activeNwsAlerts.length > 1) {
+                    alertCountBadge.innerText = `${activeNwsAlerts.length} ALERTS`;
+                    alertCountBadge.classList.remove('hidden');
+                } else {
+                    alertCountBadge.classList.add('hidden');
+                }
+            }
+
+            alertPane.classList.remove('hidden');
+        }
+
+        window.testSevereWeatherAlert = function() {
+            const currentStation = config.stations[config.activeStationIndex] || config.stations[0];
+            const lat = Number.isFinite(Number(stationCoords?.lat)) ? Number(stationCoords.lat) : (Number.isFinite(Number(currentStation?.lat)) ? Number(currentStation.lat) : 29.6236);
+            const lon = Number.isFinite(Number(stationCoords?.lon)) ? Number(stationCoords.lon) : (Number.isFinite(Number(currentStation?.lon)) ? Number(currentStation.lon) : -81.8898);
+            const now = new Date();
+            const later = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+            const locName = currentStation?.location || "Interlachen, FL";
+
+            isTestAlertActive = true;
+            activeNwsAlerts = [
+                {
+                    id: "test-severe-alert-001",
+                    event: "Severe Thunderstorm Warning",
+                    severity: "Severe",
+                    certainty: "Observed",
+                    urgency: "Immediate",
+                    senderName: "NWS Jacksonville FL (Test Preview)",
+                    headline: `Severe Thunderstorm Warning issued for ${locName} until ${later.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} — 60 mph gusts & quarter size hail`,
+                    description: `THIS IS A TEST ALERT PREVIEW.\n\nA severe thunderstorm capable of producing quarter size hail and damaging winds in excess of 60 mph is located near ${locName}, moving northeast at 25 mph.\n\nHAZARD: 60 mph wind gusts and quarter size hail.\nSOURCE: Radar indicated.\nIMPACT: Damage to roofs, siding, and trees is expected.`,
+                    instruction: "Move to an interior room on the lowest floor of a sturdy building. Avoid windows, stay away from trees, and monitor local weather updates.",
+                    areaDesc: `${locName}; Surrounding Forecast Area`,
+                    effective: now.toISOString(),
+                    expires: later.toISOString(),
+                    lat,
+                    lon
+                }
+            ];
+
+            renderAlertsToPane();
+            window.closeConfigModal();
+        };
+
+        window.playSpeechBriefing = function() {
+            if (!('speechSynthesis' in window)) {
+                return;
+            }
+            window.speechSynthesis.cancel();
+
+            const currentStation = config.stations[config.activeStationIndex] || config.stations[0];
+            const stationName = currentStation?.name || document.getElementById('display-station-name')?.innerText || 'KD4BEE WX';
+
+            const displayTemp = currentTempUnit === 'F' ? cleanNumber(weatherData.temp) : fToC(cleanNumber(weatherData.temp));
+            const tempVal = displayTemp.toFixed(1);
+            const tempUnit = currentTempUnit === 'C' ? 'Celsius' : 'Fahrenheit';
+            const humVal = Math.round(cleanNumber(weatherData.outHum));
+
+            let windSpdNum = cleanNumber(weatherData.windSpeed);
+            let windUnit = currentWindUnit;
+            if (currentWindUnit === 'kmh') {
+                windSpdNum = mphToKmh(windSpdNum);
+                windUnit = 'kilometers per hour';
+            } else if (currentWindUnit === 'kts') {
+                windSpdNum = mphToKts(windSpdNum);
+                windUnit = 'knots';
+            } else {
+                windUnit = 'miles per hour';
+            }
+            const windSpd = windSpdNum.toFixed(1);
+            const windDir = degToCardinal(cleanNumber(weatherData.windDeg));
+
+            let pressVal, pressUnit;
+            if (currentBaroUnit === 'inhg') {
+                pressVal = cleanNumber(weatherData.baroInhg).toFixed(2);
+                pressUnit = 'inches of mercury';
+            } else {
+                pressVal = cleanNumber(weatherData.baroHpa).toFixed(1);
+                pressUnit = 'hectopascals';
+            }
+
+            const rMult = currentRainUnit === 'mm' ? 25.4 : 1;
+            const rUnitWord = currentRainUnit === 'mm' ? 'millimeters' : 'inches';
+            const rainDayVal = (cleanNumber(weatherData.rainDaily) * rMult).toFixed(2);
+
+            let alertSpeech = "";
+            if (activeNwsAlerts && activeNwsAlerts.length > 0) {
+                alertSpeech = ` Active National Weather Service alert: ${activeNwsAlerts[0].headline}.`;
+            }
+
+            const text = `Weather briefing for ${stationName}.${alertSpeech} Current temperature is ${tempVal} degrees ${tempUnit}, with humidity at ${humVal} percent. Wind is blowing from the ${windDir} at ${windSpd} ${windUnit}. Barometric pressure is ${pressVal} ${pressUnit}, and daily rainfall is ${rainDayVal} ${rUnitWord}.`;
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        };
+
         async function checkNwsAlerts(overrideCoords = null) {
+            if (isTestAlertActive) {
+                renderAlertsToPane();
+                return;
+            }
+
             const curSt = config.stations[config.activeStationIndex] || config.stations[0];
             const alertPane = document.getElementById('nwsAlertPane');
             const alertTitle = document.getElementById('nwsAlertTitle');
@@ -1117,29 +1258,7 @@
                             };
                         });
 
-                        const primary = activeNwsAlerts[0];
-                        const combinedMarquee = activeNwsAlerts.length > 1
-                            ? activeNwsAlerts.map(a => `${a.event}: ${a.headline}`).join('   •••   ')
-                            : primary.headline;
-
-                        alertTitle.innerText = combinedMarquee;
-
-                        if (alertBannerLabel) {
-                            alertBannerLabel.innerText = activeNwsAlerts.length > 1
-                                ? `${activeNwsAlerts.length} Active NWS Alerts • Tap for Full Details`
-                                : `Active NWS ${primary.event} • Tap for Details`;
-                        }
-
-                        if (alertCountBadge) {
-                            if (activeNwsAlerts.length > 1) {
-                                alertCountBadge.innerText = `${activeNwsAlerts.length} ALERTS`;
-                                alertCountBadge.classList.remove('hidden');
-                            } else {
-                                alertCountBadge.classList.add('hidden');
-                            }
-                        }
-
-                        alertPane.classList.remove('hidden');
+                        renderAlertsToPane();
                         return;
                     }
                 }
@@ -2527,6 +2646,7 @@
 
         async function fetchLiveApiData(forceHistory = false) {
             if (isSimulation) return;
+            isTestAlertActive = false;
 
             const curSt = config.stations[config.activeStationIndex] || config.stations[0];
             const statusText = document.getElementById('sync-source-badge');
