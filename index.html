@@ -2781,13 +2781,42 @@
 
         async function fetchLocationLiveWeather(locQuery) {
             resetRainTelemetryForStation();
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locQuery)}`);
-            if (!geoRes.ok) throw new Error("Geocoding failed");
-            const geoData = await geoRes.json();
-            if (!geoData || geoData.length === 0) throw new Error("Location not found");
+            const cleanQuery = (locQuery && locQuery.trim()) || "Interlachen, FL";
+            let lat = null;
+            let lon = null;
 
-            const lat = parseFloat(geoData[0].lat);
-            const lon = parseFloat(geoData[0].lon);
+            // Primary geocoder: Open-Meteo Geocoding API (fast, CORS-friendly, no strict User-Agent blocks)
+            try {
+                const omGeoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanQuery)}&count=1&language=en&format=json`;
+                const omGeoRes = await fetchWithTimeout(omGeoUrl, {}, 5000);
+                if (omGeoRes.ok) {
+                    const omGeoData = await omGeoRes.json();
+                    if (omGeoData && Array.isArray(omGeoData.results) && omGeoData.results.length > 0) {
+                        lat = parseFloat(omGeoData.results[0].latitude);
+                        lon = parseFloat(omGeoData.results[0].longitude);
+                    }
+                }
+            } catch (e) {}
+
+            // Secondary geocoder: Nominatim fallback
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                try {
+                    const geoUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(cleanQuery)}`;
+                    const geoRes = await fetchWithTimeout(geoUrl, {}, 5000);
+                    if (geoRes.ok) {
+                        const geoData = await geoRes.json();
+                        if (Array.isArray(geoData) && geoData.length > 0) {
+                            lat = parseFloat(geoData[0].lat);
+                            lon = parseFloat(geoData[0].lon);
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                throw new Error("Location not found");
+            }
+
             stationCoords = { lat, lon };
 
             const curSt = config.stations[config.activeStationIndex];
@@ -2799,7 +2828,7 @@
 
             const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,rain&daily=temperature_2m_max,temperature_2m_min,rain_sum&past_days=7&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`;
             
-            const wRes = await fetch(weatherUrl);
+            const wRes = await fetchWithTimeout(weatherUrl, {}, 7000);
             if (!wRes.ok) throw new Error("Weather fetch failed");
             const wData = await wRes.json();
 
@@ -2866,7 +2895,7 @@
                 renderAllGauges();
             }
 
-            await checkNwsAlerts({ lat, lon });
+            checkNwsAlerts({ lat, lon });
         }
 
         async function fetchLiveApiData(forceHistory = false) {
@@ -2878,8 +2907,10 @@
             const stationKey = getStationCacheKey(curSt);
 
             if (!curSt.apiKey || curSt.apiKey.trim() === "") {
+                if (statusText) statusText.innerText = 'Syncing Location...';
                 try {
-                    await fetchLocationLiveWeather(curSt.location || curSt.name);
+                    const query = (curSt.location && curSt.location.trim()) || (curSt.name && curSt.name.trim()) || "Interlachen, FL";
+                    await fetchLocationLiveWeather(query);
                     saveStationCache(curSt);
                     if (statusText) statusText.innerText = 'Location (Live)';
                     if (statusLed) statusLed.className = 'led-indicator led-green';
@@ -3067,9 +3098,9 @@
         window.addNewStation = function() {
             saveFormToCurrentStationIndex();
             const newIndex = config.stations.length;
-            config.stations.push({
+            const newStation = {
                 name: "New Weather Station",
-                location: "",
+                location: "Interlachen, FL",
                 lat: null,
                 lon: null,
                 macAddress: "",
@@ -3082,7 +3113,8 @@
                 digitalFontSize: 40,
                 gaugeScale: 240,
                 refreshInterval: 15000
-            });
+            };
+            config.stations.push(newStation);
             config.activeStationIndex = newIndex;
             populateStationDropdown();
             loadActiveStationIntoForm();
@@ -3143,18 +3175,18 @@
             const gaugeScaleVal = parseInt(document.getElementById('setting-gauge-scale')?.value || '240');
             const refreshVal = parseInt(document.getElementById('setting-refresh-interval')?.value || '15000');
 
-            const prevLoc = config.stations[idx].location;
-            const newLoc = locVal || "Interlachen, FL";
-            if (prevLoc && prevLoc.trim().toLowerCase() !== newLoc.trim().toLowerCase()) {
+            const prevLoc = config.stations[idx].location || "";
+            const newLoc = (locVal && locVal.trim()) || "Interlachen, FL";
+            if (prevLoc.trim().toLowerCase() !== newLoc.trim().toLowerCase()) {
                 config.stations[idx].lat = null;
                 config.stations[idx].lon = null;
             }
 
-            config.stations[idx].name = nameVal || "KD4BEE WX";
+            config.stations[idx].name = (nameVal && nameVal.trim()) || "KD4BEE WX";
             config.stations[idx].location = newLoc;
-            config.stations[idx].macAddress = macVal || "";
-            config.stations[idx].apiKey = apiVal || "";
-            config.stations[idx].appKey = appVal || "";
+            config.stations[idx].macAddress = (macVal || "").trim();
+            config.stations[idx].apiKey = (apiVal || "").trim();
+            config.stations[idx].appKey = (appVal || "").trim();
             config.stations[idx].tempUnit = tempVal || "F";
             config.stations[idx].baroUnit = baroVal || "hpa";
             config.stations[idx].windUnit = windVal || "mph";
