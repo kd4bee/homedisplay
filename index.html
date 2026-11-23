@@ -18,6 +18,17 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <script>
+        // Define early so initial iframe onload="about:blank" never throws before main script runs
+        window.hideRadarLoader = function() {
+            const loader = document.getElementById('radarLoadingOverlay');
+            if (loader) {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.classList.add('hidden'), 300);
+            }
+        };
+    </script>
+
     <style>
         :root {
             --bg-dark: #0e131d;
@@ -144,13 +155,13 @@
 
         <!-- Controls / Actions -->
         <div class="flex flex-wrap items-center gap-2">
+            <button id="radar-btn" onclick="window.openRadarModal()" title="Animated Doppler Radar" class="bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-200 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
+                <i class="fa-solid fa-satellite-dish text-emerald-300"></i>
+                <span>Radar</span>
+            </button>
             <button id="briefing-btn" onclick="window.playSpeechBriefing()" title="Audio Weather Briefing" class="bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-200 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
                 <i class="fa-solid fa-volume-high text-cyan-300"></i>
                 <span>Briefing</span>
-            </button>
-            <button id="toggle-sim-btn" onclick="window.toggleSimulation()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
-                <i class="fa-solid fa-flask text-cyan-300"></i>
-                <span id="sim-btn-text">Demo Mode: OFF</span>
             </button>
             <button onclick="window.openConfigModal()" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-600/60 text-cyan-300 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm flex items-center gap-2 transition cursor-pointer">
                 <i class="fa-solid fa-sliders"></i> Station Manager
@@ -471,6 +482,61 @@
         <div id="last-update-time">LAST PACKET: JUST NOW</div>
     </footer>
 
+    <!-- ANIMATED DOPPLER RADAR MODAL -->
+    <div id="radarModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="wd-panel w-full max-w-2xl h-[88vh] max-h-[760px] rounded-xl p-4 sm:p-5 flex flex-col gap-3 border-emerald-500/50 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-2.5 shrink-0">
+                <div>
+                    <h3 class="font-black text-base text-emerald-300 flex items-center gap-2">
+                        <i class="fa-solid fa-satellite-dish text-emerald-400 animate-pulse"></i>
+                        <span id="radarModalTitle">Putnam County Doppler Radar</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 font-semibold mt-0.5" id="radarModalSubTitle">Interlachen, FL • Live Animated NEXRAD Loop</p>
+                </div>
+                <button onclick="window.closeRadarModal()" class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white border border-slate-700 shrink-0 cursor-pointer" title="Close Radar">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 bg-slate-900/80 p-2 rounded-lg border border-slate-800 shrink-0 text-xs">
+                <span class="text-slate-300 font-bold px-1"><i class="fa-solid fa-location-dot text-emerald-400 mr-1.5"></i>Radar Center:</span>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="window.focusRadarPreset('putnam')" id="radarPresetPutnam" class="px-2.5 py-1 rounded-lg font-bold bg-emerald-600 text-white transition cursor-pointer">
+                        Putnam Co.
+                    </button>
+                    <button type="button" onclick="window.focusRadarPreset('station')" id="radarPresetStation" class="px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-white bg-slate-800 border border-slate-700 transition cursor-pointer">
+                        Active Station
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative flex-1 w-full rounded-lg overflow-hidden border border-slate-700/80 bg-slate-950">
+                <div id="radarLoadingOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-slate-300 text-xs font-bold gap-2 pointer-events-none z-10 transition-opacity duration-300">
+                    <i class="fa-solid fa-radar fa-spin text-2xl text-emerald-400"></i>
+                    <span>Loading Animated Doppler Radar...</span>
+                </div>
+                <iframe
+                    id="dopplerRadarFrame"
+                    title="Animated Doppler Weather Radar"
+                    class="w-full h-full border-0"
+                    src="about:blank"
+                    allow="geolocation"
+                    loading="lazy"
+                    onload="if (typeof window.hideRadarLoader === 'function') window.hideRadarLoader()">
+                </iframe>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 shrink-0 pt-2 border-t border-slate-800">
+                <a id="externalRadarLink" href="https://embed.windy.com/embed2.html?lat=29.6236&lon=-81.8898&detailLat=29.6236&detailLon=-81.8898&width=650&height=450&zoom=9&level=surface&overlay=radar&product=radar&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1" target="_blank" rel="noopener noreferrer" onclick="window.openExternalRadarWindow(event)" class="py-2 px-3 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/35 text-emerald-200 font-bold text-xs border border-emerald-500/40 flex items-center justify-center gap-1.5 transition cursor-pointer text-center">
+                    <i class="fa-solid fa-up-right-from-square text-[11px]"></i> Open External Window
+                </a>
+                <button onclick="window.closeRadarModal()" class="py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs cursor-pointer transition">
+                    Close Radar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- NWS WEATHER ALERT FULL EXPLANATION MODAL -->
     <div id="nwsAlertModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden">
         <div class="wd-panel w-full max-w-lg max-h-[90vh] rounded-xl p-4 sm:p-5 flex flex-col gap-3 border-rose-500/60 shadow-2xl relative">
@@ -678,7 +744,6 @@
 
         let timeOffsetMs = 0;
         let refreshIntervalMs = 15000;
-        let isSimulation = false;
         let activeFetchController = null;
         let lastHistoricFetchTime = 0;
         let lastHistoricStationKey = "";
@@ -755,6 +820,15 @@
         let activeNwsAlerts = [];
         let isTestAlertActive = false;
         let stationCoords = { lat: 29.6236, lon: -81.8898 };
+
+        const PUTNAM_COUNTY_RADAR_COORDS = {
+            lat: 29.6236,
+            lon: -81.8898,
+            zoom: 9,
+            title: "Putnam County Doppler Radar",
+            subtitle: "Interlachen, FL • Live Animated NEXRAD Loop"
+        };
+        let activeRadarUrl = "";
 
         function cleanNumber(val) {
             if (typeof val === 'string') {
@@ -1202,6 +1276,125 @@
             window.speechSynthesis.speak(utterance);
         };
 
+        // =========================================================================
+        // ANIMATED DOPPLER RADAR MODAL & EXTERNAL WINDOW HANDLERS
+        // =========================================================================
+        function buildWindyRadarEmbedUrl(lat, lon, zoom = 9) {
+            const tempMetric = currentTempUnit === 'C' ? '°C' : '°F';
+            const windMetric = currentWindUnit === 'kmh' ? 'km/h' : (currentWindUnit === 'kts' ? 'kt' : (currentWindUnit === 'ms' ? 'm/s' : 'mph'));
+            return `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&detailLat=${lat}&detailLon=${lon}&width=650&height=450&zoom=${zoom}&level=surface&overlay=radar&product=radar&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=${encodeURIComponent(windMetric)}&metricTemp=${encodeURIComponent(tempMetric)}&radarRange=-1`;
+        }
+
+        function resolveActiveStationRadarCoords() {
+            const st = config.stations[config.activeStationIndex] || config.stations[0];
+            if (stationCoords && Number.isFinite(Number(stationCoords.lat)) && Number.isFinite(Number(stationCoords.lon))) {
+                return {
+                    lat: Number(stationCoords.lat),
+                    lon: Number(stationCoords.lon),
+                    zoom: 9,
+                    title: `${st.name} Doppler Radar`,
+                    subtitle: `${st.location || 'Active Station'} • Live Animated NEXRAD Loop`
+                };
+            }
+            if (st && Number.isFinite(Number(st.lat)) && Number.isFinite(Number(st.lon))) {
+                return {
+                    lat: Number(st.lat),
+                    lon: Number(st.lon),
+                    zoom: 9,
+                    title: `${st.name} Doppler Radar`,
+                    subtitle: `${st.location || 'Active Station'} • Live Animated NEXRAD Loop`
+                };
+            }
+            return PUTNAM_COUNTY_RADAR_COORDS;
+        }
+
+        function updateRadarPresetButtons(mode) {
+            const putnamBtn = document.getElementById('radarPresetPutnam');
+            const stationBtn = document.getElementById('radarPresetStation');
+            if (!putnamBtn || !stationBtn) return;
+
+            if (mode === 'putnam') {
+                putnamBtn.className = "px-2.5 py-1 rounded-lg font-bold bg-emerald-600 text-white transition cursor-pointer";
+                stationBtn.className = "px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-white bg-slate-800 border border-slate-700 transition cursor-pointer";
+            } else {
+                stationBtn.className = "px-2.5 py-1 rounded-lg font-bold bg-emerald-600 text-white transition cursor-pointer";
+                putnamBtn.className = "px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-white bg-slate-800 border border-slate-700 transition cursor-pointer";
+            }
+        }
+
+        window.focusRadarPreset = function(mode) {
+            const target = mode === 'putnam' ? PUTNAM_COUNTY_RADAR_COORDS : resolveActiveStationRadarCoords();
+            updateRadarPresetButtons(mode);
+            loadRadarView(target);
+        };
+
+        function loadRadarView(target) {
+            safeSetText('radarModalTitle', target.title);
+            safeSetText('radarModalSubTitle', target.subtitle);
+
+            const embedUrl = buildWindyRadarEmbedUrl(target.lat, target.lon, target.zoom || 9);
+            activeRadarUrl = embedUrl;
+
+            const extLink = document.getElementById('externalRadarLink');
+            if (extLink) {
+                extLink.href = embedUrl;
+            }
+
+            const loader = document.getElementById('radarLoadingOverlay');
+            if (loader) {
+                loader.classList.remove('opacity-0');
+                loader.classList.remove('hidden');
+            }
+
+            const frame = document.getElementById('dopplerRadarFrame');
+            if (frame && frame.src !== embedUrl) {
+                frame.src = embedUrl;
+            } else if (loader) {
+                loader.classList.add('hidden');
+            }
+        }
+
+        window.hideRadarLoader = function() {
+            const loader = document.getElementById('radarLoadingOverlay');
+            if (loader) {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.classList.add('hidden'), 300);
+            }
+        };
+
+        window.openRadarModal = function() {
+            const modal = document.getElementById('radarModal');
+            if (modal) modal.classList.remove('hidden');
+
+            const st = config.stations[config.activeStationIndex] || config.stations[0];
+            const isPutnamStation = (st.location || '').toLowerCase().includes('interlachen') ||
+                                    (st.location || '').toLowerCase().includes('hollister') ||
+                                    (st.name || '').toUpperCase().includes('KD4BEE');
+
+            if (isPutnamStation) {
+                updateRadarPresetButtons('putnam');
+                const target = resolveActiveStationRadarCoords();
+                loadRadarView({
+                    ...target,
+                    title: st.name === 'KD4BEE WX' ? 'Putnam County Doppler Radar' : `${st.name} (Putnam Co.) Radar`
+                });
+            } else {
+                updateRadarPresetButtons('station');
+                loadRadarView(resolveActiveStationRadarCoords());
+            }
+        };
+
+        window.closeRadarModal = function() {
+            const modal = document.getElementById('radarModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.openExternalRadarWindow = function(e) {
+            if (e) e.preventDefault();
+            const url = activeRadarUrl || buildWindyRadarEmbedUrl(PUTNAM_COUNTY_RADAR_COORDS.lat, PUTNAM_COUNTY_RADAR_COORDS.lon, 9);
+            window.open(url, '_blank', 'noopener,noreferrer');
+        };
+
         async function checkNwsAlerts(overrideCoords = null) {
             if (isTestAlertActive) {
                 renderAlertsToPane();
@@ -1614,30 +1807,91 @@
         }
 
         async function syncTimeWithAkamai() {
-            const startPing = performance.now();
-            try {
-                const response = await fetch('https://images.apple.com/favicon.ico?' + Date.now(), { method: 'HEAD', cache: 'no-store' });
-                const endPing = performance.now();
-                const latency = Math.round(endPing - startPing);
+            const sourceBadge = document.getElementById('sync-source-badge');
+            const latencyBadge = document.getElementById('sync-latency-badge');
+            if (sourceBadge) sourceBadge.innerText = 'Syncing...';
 
-                const dateHeader = response.headers.get('Date');
-                if (dateHeader) {
-                    const akamaiTime = new Date(dateHeader).getTime();
-                    const localDeviceTime = Date.now();
-                    timeOffsetMs = akamaiTime - localDeviceTime;
-
-                    const latencyBadge = document.getElementById('sync-latency-badge');
-                    const sourceBadge = document.getElementById('sync-source-badge');
-                    if (latencyBadge) latencyBadge.innerText = `Lat: ${latency}ms`;
-                    if (sourceBadge) sourceBadge.innerText = 'Akamai CDN';
+            const TIME_SOURCES = [
+                {
+                    name: "Akamai CDN",
+                    url: "https://time.akamai.com/?iso",
+                    parse: async (response) => {
+                        const text = await response.text();
+                        const date = new Date(text.trim());
+                        return date.getTime();
+                    }
+                },
+                {
+                    name: "Cloudflare Edge",
+                    url: "https://www.cloudflare.com/cdn-cgi/trace",
+                    parse: async (response) => {
+                        const text = await response.text();
+                        const match = text.match(/^ts=(.+)$/m);
+                        if (match && match[1]) {
+                            return Math.floor(parseFloat(match[1]) * 1000);
+                        }
+                        return NaN;
+                    }
+                },
+                {
+                    name: "TimeAPI-IO",
+                    url: "https://timeapi.io/api/v1/time/current/zone?timeZone=UTC",
+                    parse: async (response) => {
+                        const data = await response.json();
+                        if (data && data.dateTime) {
+                            const isoStr = data.dateTime.endsWith('Z') ? data.dateTime : data.dateTime + 'Z';
+                            return new Date(isoStr).getTime();
+                        }
+                        return NaN;
+                    }
+                },
+                {
+                    name: "WorldTimeAPI",
+                    url: "https://worldtimeapi.org/api/timezone/Etc/UTC",
+                    parse: async (response) => {
+                        const data = await response.json();
+                        if (data && data.datetime) return new Date(data.datetime).getTime();
+                        if (data && typeof data.unixtime === 'number') return data.unixtime * 1000;
+                        return NaN;
+                    }
                 }
-            } catch (err) {
-                timeOffsetMs = 0;
-                const latencyBadge = document.getElementById('sync-latency-badge');
-                const sourceBadge = document.getElementById('sync-source-badge');
-                if (latencyBadge) latencyBadge.innerText = 'Lat: Local';
-                if (sourceBadge) sourceBadge.innerText = 'System Clock';
+            ];
+
+            for (const src of TIME_SOURCES) {
+                const startTime = Date.now();
+                const startPerf = performance.now();
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 2500);
+                    const sep = src.url.includes('?') ? '&' : '?';
+
+                    const response = await fetch(`${src.url}${sep}_nocache=${startTime}`, {
+                        signal: controller.signal,
+                        cache: "no-store"
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const serverTimeMs = await src.parse(response);
+                    const endTime = Date.now();
+                    const rttMs = Math.max(0, Math.round(performance.now() - startPerf));
+                    const oneWayLatency = Math.floor((endTime - startTime) / 2);
+
+                    if (!isNaN(serverTimeMs) && serverTimeMs > 0) {
+                        timeOffsetMs = (serverTimeMs + oneWayLatency) - endTime;
+                        if (latencyBadge) latencyBadge.innerText = `Lat: ${rttMs}ms`;
+                        if (sourceBadge) sourceBadge.innerText = src.name;
+                        return;
+                    }
+                } catch (err) {
+                    // Try next atomic/network time source in cascade
+                }
             }
+
+            timeOffsetMs = 0;
+            if (latencyBadge) latencyBadge.innerText = 'Lat: Local';
+            if (sourceBadge) sourceBadge.innerText = 'Device Clock';
         }
 
         function initClocks() {
@@ -1652,7 +1906,7 @@
             setInterval(updateClocks, 1000);
 
             syncTimeWithAkamai();
-            setInterval(syncTimeWithAkamai, 300000);
+            setInterval(syncTimeWithAkamai, 30000);
         }
 
         function getSkinColors() {
@@ -2445,35 +2699,6 @@
             }
         }
 
-        function startSimulationLoop() {
-            setInterval(() => {
-                if (!isSimulation) return;
-
-                weatherData.windSpeed = Math.max(0, weatherData.windSpeed + (Math.random() * 2.4 - 1.2));
-                weatherData.windGust = Math.max(weatherData.windSpeed, weatherData.windSpeed + Math.random() * 4);
-                if (weatherData.windGust > weatherData.windMax) weatherData.windMax = weatherData.windGust;
-
-                weatherData.windDeg = (weatherData.windDeg + (Math.random() * 12 - 6) + 360) % 360;
-                weatherData.windAvgDeg = (weatherData.windAvgDeg * 0.9) + (weatherData.windDeg * 0.1);
-
-                weatherData.temp += (Math.random() * 0.2 - 0.1);
-                weatherData.inTemp += (Math.random() * 0.16 - 0.08);
-                weatherData.inTempMin = Math.min(weatherData.inTempMin, weatherData.inTemp);
-                weatherData.inTempMax = Math.max(weatherData.inTempMax, weatherData.inTemp);
-                weatherData.inHum = Math.min(100, Math.max(10, weatherData.inHum + (Math.random() * 0.6 - 0.3)));
-                weatherData.inHumMin = Math.min(weatherData.inHumMin, weatherData.inHum);
-                weatherData.inHumMax = Math.max(weatherData.inHumMax, weatherData.inHum);
-                weatherData.outHum = Math.min(100, Math.max(10, weatherData.outHum + (Math.random() * 0.6 - 0.3)));
-                weatherData.baroInhg += (Math.random() * 0.004 - 0.002);
-                weatherData.baroHpa = weatherData.baroInhg * 33.8639;
-
-                renderAllGauges();
-                maybePushChartData();
-                const lastTime = document.getElementById('last-update-time');
-                if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
-            }, 3000);
-        }
-
         async function fetchAmbientHistoricWithProxies(mac, apiKey, appKey, limit = 96) {
             const cleanMac = mac.trim();
             const historicUrl = `https://rt.ambientweather.net/v1/devices/${encodeURIComponent(cleanMac)}?applicationKey=${encodeURIComponent(appKey)}&apiKey=${encodeURIComponent(apiKey)}&limit=${limit}`;
@@ -2645,7 +2870,6 @@
         }
 
         async function fetchLiveApiData(forceHistory = false) {
-            if (isSimulation) return;
             isTestAlertActive = false;
 
             const curSt = config.stations[config.activeStationIndex] || config.stations[0];
@@ -2787,31 +3011,11 @@
                 }
             } catch (err) {
                 console.warn('API Fetch warning:', err);
-                if (statusText) statusText.innerText = 'API Error (Demo)';
+                if (statusText) statusText.innerText = 'API Error';
                 if (statusLed) statusLed.className = 'led-indicator led-yellow';
                 checkNwsAlerts();
             }
         }
-
-        window.toggleSimulation = function() {
-            isSimulation = !isSimulation;
-            const btnText = document.getElementById('sim-btn-text');
-            const statusText = document.getElementById('sync-source-badge');
-            const statusLed = document.getElementById('status-led');
-
-            if (isSimulation) {
-                if (btnText) btnText.innerText = 'Demo Mode: ON';
-                if (statusText) statusText.innerText = 'Simulated Data';
-                if (statusLed) statusLed.className = 'led-indicator led-green';
-                if (updateInterval) clearInterval(updateInterval);
-                checkNwsAlerts();
-            } else {
-                if (btnText) btnText.innerText = 'Demo Mode: OFF';
-                fetchLiveApiData();
-                if (updateInterval) clearInterval(updateInterval);
-                updateInterval = setInterval(fetchLiveApiData, refreshIntervalMs);
-            }
-        };
 
         window.forceRefreshConnection = function() {
             const icon = document.getElementById('refresh-icon');
@@ -2845,23 +3049,19 @@
                 updateChartsWithCurrentUnits();
             }
 
-            if (!isSimulation) {
-                const hasKeys = Boolean(curSt && curSt.apiKey && curSt.apiKey.trim() && curSt.appKey && curSt.appKey.trim());
-                if (forceHistory && hasKeys) {
-                    lastHistoricStationKey = getStationCacheKey(curSt);
-                    lastHistoricFetchTime = Date.now();
-                    setTimeout(() => {
-                        if (!rawHistoricLogs || rawHistoricLogs.length === 0) {
-                            runStation8HourHistorySync(curSt, null, false);
-                        }
-                    }, 900);
-                }
-                fetchLiveApiData(forceHistory);
-                if (updateInterval) clearInterval(updateInterval);
-                updateInterval = setInterval(() => fetchLiveApiData(false), refreshIntervalMs);
-            } else {
-                checkNwsAlerts();
+            const hasKeys = Boolean(curSt && curSt.apiKey && curSt.apiKey.trim() && curSt.appKey && curSt.appKey.trim());
+            if (forceHistory && hasKeys) {
+                lastHistoricStationKey = getStationCacheKey(curSt);
+                lastHistoricFetchTime = Date.now();
+                setTimeout(() => {
+                    if (!rawHistoricLogs || rawHistoricLogs.length === 0) {
+                        runStation8HourHistorySync(curSt, null, false);
+                    }
+                }, 900);
             }
+            fetchLiveApiData(forceHistory);
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(() => fetchLiveApiData(false), refreshIntervalMs);
         }
 
         window.addNewStation = function() {
@@ -3009,7 +3209,6 @@
             initClocks();
             initCharts();
             applyPaneDisplayModes();
-            startSimulationLoop();
             applyActiveStationToDashboard(true);
         }
 
@@ -3020,7 +3219,7 @@
         }
 
         window.addEventListener('pageshow', () => {
-            if (!isSimulation && (!rawHistoricLogs || rawHistoricLogs.length === 0)) {
+            if (!rawHistoricLogs || rawHistoricLogs.length === 0) {
                 const curSt = config.stations[config.activeStationIndex] || config.stations[0];
                 if (curSt && curSt.apiKey && curSt.appKey) {
                     runStation8HourHistorySync(curSt, null, false);
