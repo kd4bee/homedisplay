@@ -139,10 +139,13 @@
                 <div class="text-xs text-slate-300 font-bold uppercase tracking-wider">UTC CLOCK</div>
                 <div id="clock-utc" class="text-2xl md:text-3xl font-black text-white crisp-clock leading-tight">00:00:00 UTC</div>
             </div>
-            <div class="bg-slate-900/80 px-3.5 py-2 rounded-lg border border-slate-700/60 flex flex-col justify-center text-left">
-                <div class="flex items-center gap-2">
-                    <span id="status-led" class="led-indicator led-green"></span>
-                    <span class="text-xs text-slate-300 font-bold">SOURCE: <span id="sync-source-badge" class="text-cyan-400 font-bold">Akamai CDN</span></span>
+            <div class="bg-slate-900/80 px-3 py-2 rounded-lg border border-slate-700/60 flex flex-col justify-center text-left min-w-0">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span id="status-led" class="led-indicator led-green shrink-0"></span>
+                    <span class="text-xs text-slate-300 font-bold flex items-center gap-1 min-w-0">
+                        <span class="shrink-0">SOURCE:</span>
+                        <span id="sync-source-badge" class="text-cyan-400 font-bold truncate max-w-[130px] sm:max-w-[165px]" title="Akamai CDN">Akamai CDN</span>
+                    </span>
                 </div>
                 <div class="flex items-center justify-between gap-3 mt-0.5">
                     <div class="text-[11px] text-slate-400 font-mono" id="sync-latency-badge">Lat: --ms</div>
@@ -1881,7 +1884,10 @@
                     if (!isNaN(serverTimeMs) && serverTimeMs > 0) {
                         timeOffsetMs = (serverTimeMs + oneWayLatency) - endTime;
                         if (latencyBadge) latencyBadge.innerText = `Lat: ${rttMs}ms`;
-                        if (sourceBadge) sourceBadge.innerText = src.name;
+                        if (sourceBadge) {
+                            sourceBadge.innerText = src.name;
+                            sourceBadge.title = src.name;
+                        }
                         return;
                     }
                 } catch (err) {
@@ -1891,7 +1897,10 @@
 
             timeOffsetMs = 0;
             if (latencyBadge) latencyBadge.innerText = 'Lat: Local';
-            if (sourceBadge) sourceBadge.innerText = 'Device Clock';
+            if (sourceBadge) {
+                sourceBadge.innerText = 'Device Clock';
+                sourceBadge.title = 'Device Clock';
+            }
         }
 
         function initClocks() {
@@ -2907,17 +2916,26 @@
             const stationKey = getStationCacheKey(curSt);
 
             if (!curSt.apiKey || curSt.apiKey.trim() === "") {
-                if (statusText) statusText.innerText = 'Syncing Location...';
+                if (statusText) {
+                    statusText.innerText = 'Syncing Location...';
+                    statusText.title = 'Syncing Location...';
+                }
                 try {
                     const query = (curSt.location && curSt.location.trim()) || (curSt.name && curSt.name.trim()) || "Interlachen, FL";
                     await fetchLocationLiveWeather(query);
                     saveStationCache(curSt);
-                    if (statusText) statusText.innerText = 'Location (Live)';
+                    if (statusText) {
+                        statusText.innerText = 'Location (Live)';
+                        statusText.title = 'Location (Live)';
+                    }
                     if (statusLed) statusLed.className = 'led-indicator led-green';
                     const lastTime = document.getElementById('last-update-time');
                     if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
                 } catch (err) {
-                    if (statusText) statusText.innerText = 'Location Error';
+                    if (statusText) {
+                        statusText.innerText = 'Location Error';
+                        statusText.title = 'Location Error';
+                    }
                     if (statusLed) statusLed.className = 'led-indicator led-yellow';
                     checkNwsAlerts();
                 }
@@ -3007,7 +3025,10 @@
 
                     // Render live gauges immediately without waiting for history or NWS alerts
                     renderAllGauges();
-                    if (statusText) statusText.innerText = 'Ambient API (Live)';
+                    if (statusText) {
+                        statusText.innerText = 'Ambient API (Live)';
+                        statusText.title = 'Ambient API (Live)';
+                    }
                     if (statusLed) statusLed.className = 'led-indicator led-green';
                     const lastTime = document.getElementById('last-update-time');
                     if (lastTime) lastTime.innerText = 'LAST PACKET: ' + new Date().toLocaleTimeString();
@@ -3042,7 +3063,10 @@
                 }
             } catch (err) {
                 console.warn('API Fetch warning:', err);
-                if (statusText) statusText.innerText = 'API Error';
+                if (statusText) {
+                    statusText.innerText = 'API Error';
+                    statusText.title = 'API Error';
+                }
                 if (statusLed) statusLed.className = 'led-indicator led-yellow';
                 checkNwsAlerts();
             }
